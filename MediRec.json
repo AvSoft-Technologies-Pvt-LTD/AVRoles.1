@@ -1,0 +1,67 @@
+{
+    "metrics": [
+      { "title": "Heart Rate", "value": 72, "unit": "bpm", "status": "Normal", "icon": "FiHeart", "color": "text-red-500" },
+      { "title": "Temperature", "value": 98.6, "unit": "°F", "status": "Stable", "icon": "FiThermometer", "color": "text-blue-500" },
+      { "title": "Blood Pressure", "value": "120/80", "unit": "mmHg", "status": "Good", "icon": "FiDroplet", "color": "text-cyan-500" },
+      { "title": "Blood Sugar", "value": 110, "unit": "mg/dL", "status": "Controlled", "icon": "FiActivity", "color": "text-green-500" }
+    ],
+    "medicalTabs": {
+      "medicalHistory": {
+        "label": "Medical History",
+        "data": [
+          { "date": "2024-03-20", "diagnosis": "Flu", "doctor": "Dr. Smith", "status": "Discharged" },
+          { "date": "2024-02-15", "diagnosis": "Migraine", "doctor": "Dr. Johnson", "status": "Ongoing" },
+          { "date": "2024-02-01", "diagnosis": "Diabetes Checkup", "doctor": "Dr. Patel", "status": "Ongoing" },
+          { "date": "2024-01-25", "diagnosis": "Hypertension", "doctor": "Dr. Mehta", "status": "Ongoing" },
+          { "date": "2024-01-10", "diagnosis": "COVID-19", "doctor": "Dr. Kapoor", "status": "Recovered" },
+          { "date": "2023-12-20", "diagnosis": "Pneumonia", "doctor": "Dr. Reddy", "status": "Discharged" },
+          { "date": "2023-11-30", "diagnosis": "Asthma", "doctor": "Dr. Verma", "status": "Ongoing" }
+        ],
+        "columns": [
+          { "key": "date", "label": "Date" },
+          { "key": "diagnosis", "label": "Diagnosis" },
+          { "key": "doctor", "label": "Doctor" },
+          { "key": "status", "label": "Status" }
+        ]
+      },
+      "reports": {
+        "label": "Reports",
+        "data": [
+          { "date": "2025-03-10", "type": "Blood Test", "result": "Normal", "doctor": "Dr. Smith", "status": "Normal" },
+          { "date": "2025-02-20", "type": "X-Ray", "result": "Pending Review", "doctor": "Dr. Johnson", "status": "Pending" },
+          { "date": "2025-02-10", "type": "MRI Scan", "result": "Clear", "doctor": "Dr. Patel", "status": "Completed" },
+          { "date": "2025-01-28", "type": "ECG", "result": "Mild Arrhythmia", "doctor": "Dr. Mehta", "status": "Ongoing" },
+          { "date": "2025-01-15", "type": "Lipid Profile", "result": "High Cholesterol", "doctor": "Dr. Reddy", "status": "Ongoing" },
+          { "date": "2024-12-30", "type": "CT Scan", "result": "Normal", "doctor": "Dr. Kapoor", "status": "Normal" },
+          { "date": "2024-12-10", "type": "Ultrasound", "result": "No Issues", "doctor": "Dr. Verma", "status": "Completed" }
+        ],
+        "columns": [
+          { "key": "date", "label": "Date" },
+          { "key": "type", "label": "Type" },
+          { "key": "result", "label": "Result" },
+          { "key": "doctor", "label": "Doctor" },
+          { "key": "status", "label": "Status" }
+        ]
+      },
+      "prescriptions": {
+        "label": "Prescriptions",
+        "data": [
+          { "date": "2025-03-10", "medication": "Paracetamol", "dosage": "500mg", "doctor": "Dr. Smith", "status": "Active" },
+          { "date": "2025-02-20", "medication": "Amoxicillin", "dosage": "250mg", "doctor": "Dr. Johnson", "status": "Pending" },
+          { "date": "2025-02-15", "medication": "Metformin", "dosage": "850mg", "doctor": "Dr. Patel", "status": "Ongoing" },
+          { "date": "2025-01-28", "medication": "Aspirin", "dosage": "75mg", "doctor": "Dr. Mehta", "status": "Active" },
+          { "date": "2025-01-10", "medication": "Losartan", "dosage": "50mg", "doctor": "Dr. Reddy", "status": "Ongoing" },
+          { "date": "2024-12-30", "medication": "Atorvastatin", "dosage": "20mg", "doctor": "Dr. Kapoor", "status": "Completed" },
+          { "date": "2024-12-15", "medication": "Salbutamol", "dosage": "100mcg", "doctor": "Dr. Verma", "status": "Active" }
+        ],
+        "columns": [
+          { "key": "date", "label": "Date" },
+          { "key": "medication", "label": "Medication" },
+          { "key": "dosage", "label": "Dosage" },
+          { "key": "doctor", "label": "Doctor" },
+          { "key": "status", "label": "Status" }
+        ]
+      }
+    }
+  }
+  

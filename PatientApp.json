@@ -1,0 +1,12 @@
+{
+    "appointments": [
+      { "id": 1, "title": "Eye Checkup", "date": "2025-01-10", "time": "09:00", "patientName": "John Doe" },
+      { "id": 2, "title": "General Consultation", "date": "2025-01-22", "time": "11:30", "patientName": "Emma Smith" },
+      { "id": 3, "title": "Follow-up", "date": "2025-02-05", "time": "15:00", "patientName": "Alice Brown" },
+      { "id": 4, "title": "Physiotherapy", "date": "2025-02-20", "time": "10:30", "patientName": "David Lee" },
+      { "id": 5, "title": "Checkup", "date": "2025-03-15", "time": "10:00", "patientName": "John Doe" },
+      { "id": 6, "title": "Dental", "date": "2025-03-18", "time": "14:00", "patientName": "Emma Smith" },
+      { "id": 7, "title": "Physiotherapy", "date": "2025-03-18", "time": "16:00", "patientName": "Alice Brown" }
+    ]
+  }
+  
