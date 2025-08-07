@@ -2,301 +2,103 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { registerUser, sendOTP } from "../context-api/authSlice";
-import { Eye, EyeOff, Upload, FileText, X, Camera, Phone, ChevronDown, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Upload, FileText, X, Camera, ChevronDown } from 'lucide-react';
 
-// API file upload function
-const uploadFileToAPI = async (file) => {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    // Replace with your actual API endpoint
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    
-    if (!response.ok) {
-      throw new Error('Upload failed');
-    }
-    
-    const data = await response.json();
-    return {
-      url: data.url, // Assuming API returns { url: "https://..." }
-      name: file.name,
-      type: file.type,
-      size: file.size
-    };
-  } catch (error) {
-    // Fallback to mock URL for demo purposes
-    console.warn('API upload failed, using mock URL:', error);
-    return {
-      url: URL.createObjectURL(file), // Temporary URL for demo
-      name: file.name,
-      type: file.type,
-      size: file.size
-    };
-  }
-};
-
-// File Upload Component with API Integration
-const NeatFileUpload = ({ 
-  name, 
-  accept, 
-  multiple = false, 
-  files = [], 
-  onFileChange, 
-  label, 
-  required = false, 
-  icon: Icon = Upload 
-}) => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [previewModal, setPreviewModal] = useState({ isOpen: false, file: null });
-
-  const handleFileUpload = async (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    if (selectedFiles.length === 0) return;
-
-    setIsUploading(true);
-    
-    try {
-      const uploadPromises = selectedFiles.map(uploadFileToAPI);
-      const uploadedFiles = await Promise.all(uploadPromises);
-      
-      const updatedFiles = multiple 
-        ? [...files, ...uploadedFiles]
-        : uploadedFiles;
-        
-      onFileChange(name, updatedFiles);
-    } catch (error) {
-      alert('File upload failed. Please try again.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleRemoveFile = (index) => {
-    const updatedFiles = files.filter((_, i) => i !== index);
-    onFileChange(name, updatedFiles);
-  };
+// File Upload Component with Blob Handling
+const NeatFileUpload = ({ name, accept, multiple = false, files, onFileChange, label, required = false, icon: Icon = Upload }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   const handlePreview = (file) => {
-    setPreviewModal({ isOpen: true, file });
+    setPreviewDoc(file);
+    setIsModalOpen(true);
   };
 
   return (
-    <>
-      <div className="relative floating-input" data-placeholder={`${label}${required ? ' *' : ''}`}>
-        <label className="block cursor-pointer">
-          <div className="input-field flex items-center gap-2 peer">
-            <Icon size={16} />
-            <span className="truncate">
-              {isUploading ? 'Uploading...' : `${label}${required ? ' *' : ''}`}
-            </span>
-          </div>
-          <input
-            type="file"
-            name={name}
-            accept={accept}
-            multiple={multiple}
-            onChange={handleFileUpload}
-            disabled={isUploading}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer peer"
-          />
-        </label>
-        
-        {files.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {files.map((file, i) => (
-              <div key={i} className="flex justify-between items-center p-2 border rounded-md bg-gray-50">
-                <span className="text-sm text-gray-700 truncate flex-1">{file.name}</span>
-                <div className="flex items-center gap-2 ml-2">
-                  <button 
-                    type="button" 
-                    onClick={() => handlePreview(file)} 
-                    className="text-blue-500 hover:text-blue-700 transition-colors"
-                    title="Preview"
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => handleRemoveFile(i)} 
-                    className="text-red-500 hover:text-red-700 transition-colors"
-                    title="Remove"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Preview Modal */}
-      {previewModal.isOpen && previewModal.file && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/75 z-50">
-          <div className="relative bg-white p-6 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">{previewModal.file.name}</h2>
-              <button
-                className="text-gray-500 hover:text-red-500 transition-colors"
-                onClick={() => setPreviewModal({ isOpen: false, file: null })}
-              >
-                <X size={24} />
+    <div className="relative floating-input" data-placeholder={`${label}${required ? ' *' : ''}`}>
+      <label className="block cursor-pointer">
+        <div className="input-field flex items-center gap-2 peer">
+          <Icon size={16} />
+          <span className="truncate">{label}{required && ' *'}</span>
+        </div>
+        <input
+          type="file"
+          name={name}
+          accept={accept}
+          multiple={multiple}
+          onChange={onFileChange}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer peer"
+        />
+      </label>
+      {files?.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {files.map((file, i) => (
+            <div key={i} className="flex justify-between items-center p-2 border rounded-md">
+              <span className="text-sm text-gray-700">{file.name}</span>
+              <button type="button" onClick={() => handlePreview(file)} className="text-blue-500 hover:text-blue-700">
+                <Eye size={14} />
               </button>
             </div>
-            
-            <div className="flex justify-center">
-              {previewModal.file.type?.startsWith("image/") ? (
-                <img 
-                  src={previewModal.file.url} 
-                  alt="Preview" 
-                  className="max-h-[70vh] w-auto object-contain rounded-lg" 
-                />
-              ) : previewModal.file.type === "application/pdf" ? (
-                <iframe 
-                  src={previewModal.file.url} 
-                  className="w-full h-[70vh] rounded-lg border" 
-                  title="PDF Preview" 
-                />
-              ) : (
-                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-                  <div className="text-center">
-                    <FileText size={48} className="mx-auto text-gray-400 mb-2" />
-                    <p className="text-gray-600">Preview not available for this file type</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      <a 
-                        href={previewModal.file.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline"
-                      >
-                        Download file
-                      </a>
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+          ))}
+        </div>
+      )}
+      {isModalOpen && previewDoc && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="relative bg-white p-4 rounded-lg w-full max-w-2xl">
+            <button
+              className="absolute top-2 right-2 text-red-500"
+              onClick={() => {
+                setIsModalOpen(false);
+                setPreviewDoc(null);
+              }}
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-lg font-semibold mb-4">Preview</h2>
+            {previewDoc.type?.startsWith("image/") ? (
+              <img src={URL.createObjectURL(previewDoc)} alt="Preview" className="max-h-[500px] w-full object-contain" />
+            ) : previewDoc.type === "application/pdf" ? (
+              <iframe src={URL.createObjectURL(previewDoc)} className="w-full h-[500px]" title="PDF Preview" />
+            ) : (
+              <p className="text-gray-600">Preview not available for this file type.</p>
+            )}
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
-// Photo Upload Component with API Integration
-const PhotoUpload = ({ photo, onPhotoChange, required = true }) => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [previewModal, setPreviewModal] = useState({ isOpen: false, file: null });
-
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      alert("Please upload a valid image file.");
-      return;
-    }
-
-    setIsUploading(true);
-    
-    try {
-      const uploadedPhoto = await uploadFileToAPI(file);
-      onPhotoChange(uploadedPhoto);
-    } catch (error) {
-      alert('Photo upload failed. Please try again.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleRemovePhoto = () => {
-    onPhotoChange(null);
-  };
-
-  const handlePreview = () => {
-    if (photo) {
-      setPreviewModal({ isOpen: true, file: photo });
-    }
-  };
-
-  return (
-    <>
-      <div className="relative floating-input" data-placeholder={`Upload Photo${required ? ' *' : ''}`}>
-        <label className="block relative cursor-pointer">
-          <div className="input-field flex items-center gap-2 peer">
-            <Camera size={16} />
-            <span className="truncate">
-              {isUploading ? 'Uploading...' : `Upload Photo${required ? ' *' : ''}`}
-            </span>
-          </div>
-          <input
-            type="file"
-            name="photo"
-            accept="image/*"
-            onChange={handlePhotoUpload}
-            disabled={isUploading}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          />
-        </label>
-        
-        {photo && (
-          <div className="mt-2">
-            <div className="flex justify-between items-center p-2 border rounded-md bg-gray-50">
-              <span className="text-sm text-gray-700 truncate flex-1">{photo.name}</span>
-              <div className="flex items-center gap-2 ml-2">
-                <button 
-                  type="button" 
-                  onClick={handlePreview} 
-                  className="text-blue-500 hover:text-blue-700 transition-colors"
-                  title="Preview"
-                >
-                  <Eye size={16} />
-                </button>
-                <button 
-                  type="button" 
-                  onClick={handleRemovePhoto} 
-                  className="text-red-500 hover:text-red-700 transition-colors"
-                  title="Remove"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+// Photo Upload Component with Blob Handling
+const PhotoUpload = ({ photoPreview, onPhotoChange, onPreviewClick }) => (
+  <div className="relative floating-input" data-placeholder="Upload Photo *">
+    <label className="block relative cursor-pointer">
+      <div className="input-field flex items-center gap-2 peer">
+        <Camera size={16} />
+        <span className="truncate">Upload Photo *</span>
       </div>
-
-      {/* Preview Modal */}
-      {previewModal.isOpen && previewModal.file && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/75 z-50">
-          <div className="relative bg-white p-6 rounded-lg w-full max-w-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">{previewModal.file.name}</h2>
-              <button
-                className="text-gray-500 hover:text-red-500 transition-colors"
-                onClick={() => setPreviewModal({ isOpen: false, file: null })}
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div className="flex justify-center">
-              <img 
-                src={previewModal.file.url} 
-                alt="Preview" 
-                className="max-h-[70vh] w-auto object-contain rounded-lg" 
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-};
+      <input
+        type="file"
+        name="photo"
+        accept="image/*"
+        onChange={onPhotoChange}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+      />
+    </label>
+    {photoPreview && (
+      <div className="mt-2 flex items-center gap-2">
+        {/* Only show file name and eye icon for preview */}
+        <span className="text-sm text-gray-700">
+          {/* Try to get file name from photoPreview (dataURL) or fallback */}
+          {typeof photoPreview === 'string' ? 'Photo Uploaded' : (photoPreview?.name || 'Photo Uploaded')}
+        </span>
+        <button type="button" onClick={onPreviewClick} className="text-blue-500 hover:text-blue-700">
+          <Eye size={20} />
+        </button>
+      </div>
+    )}
+  </div>
+);
 
 const CompactDropdownCheckbox = ({
   label,
@@ -389,6 +191,8 @@ const RegisterForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -418,7 +222,7 @@ const RegisterForm = () => {
     location: '',
     hospitalType: [],
     gstNumber: '',
-    nabhCertificate: [],
+    nabhCertificate: null,
     inHouseLab: '',
     inHousePharmacy: '',
     labLicenseNo: '',
@@ -452,7 +256,6 @@ const RegisterForm = () => {
   const labTestOptions = ["CBC (Complete Blood Count)", "Blood Sugar (FBS, PPBS, HbA1c)", "Lipid Profile", "Liver Function Test (LFT)", "Kidney Function Test (KFT)", "Thyroid Profile (T3, T4, TSH)", "Urine Test", "Dengue, Malaria, etc."];
   const scanServiceOptions = ["X-Ray", "MRI", "CT Scan", "Ultrasound", "ECG", "2D Echo", "Mammography"];
   const specialServicesOptions = ["Home Sample Collection", "Emergency Diagnostic Services", "Tele-Radiology Services", "Mobile Diagnostic Units"];
-  const certificateTypeOptions = ["Lab/Scan Registration Certificate", "GST Certificate", "Lab/Scan License Document", "NABL Accreditation Certificate"];
   const ayushSpecializations = ["Ayurveda", "Homeopathy", "Unani", "Siddha", "Naturopathy", "Yoga"];
   const allopathySpecializations = ["General Medicine", "Pediatrics", "Cardiology", "Orthopedics", "Dermatology", "Gynecology", "ENT", "Ophthalmology", "Radiology"];
 
@@ -460,6 +263,24 @@ const RegisterForm = () => {
     Ayurveda: ["Ayush"], Homeopathy: ["Ayush"], Unani: ["Ayush"], Siddha: ["Ayush"], Naturopathy: ["Ayush"], Yoga: ["Ayush"],
     "General Medicine": ["Allopathy"], Pediatrics: ["Allopathy"], Cardiology: ["Allopathy"], Orthopedics: ["Allopathy"],
     Dermatology: ["Allopathy"], Gynecology: ["Allopathy"], ENT: ["Allopathy"], Ophthalmology: ["Allopathy"], Radiology: ["Allopathy"]
+  };
+
+  // Convert File to Blob
+  const fileToBlob = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const arrayBuffer = reader.result;
+        const blob = new Blob([arrayBuffer], { type: file.type });
+        resolve({
+          blob,
+          name: file.name,
+          type: file.type,
+          size: file.size
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   const handleInputChange = (e) => {
@@ -507,12 +328,47 @@ const RegisterForm = () => {
     setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
-  const handleFileChange = (fieldName, files) => {
-    setFormData(prev => ({ ...prev, [fieldName]: files }));
-  };
-
-  const handlePhotoChange = (photo) => {
-    setFormData(prev => ({ ...prev, photo }));
+  const handleFileChange = async (e) => {
+    const { name, files } = e.target;
+    
+    if (name === "photo" && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith("image/")) {
+        const blobData = await fileToBlob(file);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setPhotoPreview(e.target.result);
+        };
+        reader.readAsDataURL(file);
+        setFormData(prev => ({ ...prev, photo: blobData }));
+      } else {
+        alert("Please upload a valid image file.");
+      }
+    } else if (name === "nabhCertificate" && files.length > 0) {
+      const file = files[0];
+      const blobData = await fileToBlob(file);
+      setFormData(prev => ({ ...prev, nabhCertificate: blobData }));
+    } else if (name === "certificates" && files.length > 0) {
+      const validFiles = Array.from(files).filter(
+        file => file.type === "application/pdf" || file.type.startsWith("image/")
+      );
+      if (validFiles.length > 0) {
+        const blobFiles = await Promise.all(validFiles.map(fileToBlob));
+        setFormData(prev => ({ ...prev, certificates: [...(prev.certificates || []), ...blobFiles] }));
+      } else {
+        alert("Only PDF or image files are allowed.");
+      }
+    } else if (name === "documents" && files.length > 0) {
+      const validFiles = Array.from(files).filter(
+        file => file.type === "application/pdf" || file.type.startsWith("image/")
+      );
+      if (validFiles.length > 0) {
+        const blobFiles = await Promise.all(validFiles.map(fileToBlob));
+        setFormData(prev => ({ ...prev, documents: [...(prev.documents || []), ...blobFiles] }));
+      } else {
+        alert("Only PDF or image files are allowed.");
+      }
+    }
   };
 
   const handlePincodeChange = async (e) => {
@@ -622,62 +478,7 @@ const RegisterForm = () => {
 
     setIsSubmitting(true);
     try {
-      let dataToSubmit = { userType };
-      if (userType === "patient") {
-        const {
-          firstName, middleName, lastName, phone, email, aadhaar, gender, dob, occupation,
-          temporaryAddress, permanentAddress, isSameAsPermanent, photo, password, confirmPassword,
-          agreeDeclaration, pincode, city, district, state
-        } = formData;
-        dataToSubmit = {
-          userType,
-          firstName, middleName, lastName, phone, email, aadhaar, gender, dob, occupation,
-          temporaryAddress, permanentAddress, isSameAsPermanent, photo, password, confirmPassword,
-          agreeDeclaration, pincode, city, district, state
-        };
-      } else if (userType === "hospital") {
-        const {
-          hospitalName, headCeoName, registrationNumber, location, hospitalType, gstNumber,
-          nabhCertificate, inHouseLab, inHousePharmacy, labLicenseNo, pharmacyLicenseNo,
-          otherHospitalType, photo, password, confirmPassword, agreeDeclaration, pincode, city, district, state
-        } = formData;
-        dataToSubmit = {
-          userType,
-          hospitalName, headCeoName, registrationNumber, location, hospitalType, gstNumber,
-          nabhCertificate, inHouseLab, inHousePharmacy, labLicenseNo, pharmacyLicenseNo,
-          otherHospitalType, photo, password, confirmPassword, agreeDeclaration, pincode, city, district, state
-        };
-      } else if (userType === "lab") {
-        const {
-          centerType, centerName, ownerFullName, registrationNumber, availableTests, scanServices,
-          specialServices, licenseNumber, certificates, certificateTypes, otherCertificate,
-          otherSpecialService, documents, photo, password, confirmPassword, agreeDeclaration,
-          gstNumber, pincode, city, district, state
-        } = formData;
-        dataToSubmit = {
-          userType,
-          centerType, centerName, ownerFullName, registrationNumber, availableTests, scanServices,
-          specialServices, licenseNumber, certificates, certificateTypes, otherCertificate,
-          otherSpecialService, documents, photo, password, confirmPassword, agreeDeclaration,
-          gstNumber, pincode, city, district, state
-        };
-      } else if (userType === "doctor") {
-        const {
-          aadhaar, gender, dob, photo, password, confirmPassword, pincode, city, district, state,
-          roleSpecificData
-        } = formData;
-        dataToSubmit = {
-          userType,
-          aadhaar, gender, dob, photo, password, confirmPassword, pincode, city, district, state,
-          registrationNumber: roleSpecificData.registrationNumber,
-          practiceType: roleSpecificData.practiceType,
-          specialization: roleSpecificData.specialization,
-          qualification: roleSpecificData.qualification,
-          location: roleSpecificData.location,
-          agreeDeclaration: roleSpecificData.agreeDeclaration
-        };
-      }
-
+      const dataToSubmit = { ...formData, userType };
       const resultAction = await dispatch(registerUser(dataToSubmit));
       if (registerUser.fulfilled.match(resultAction)) {
         if (userType === "patient" && !isOTPSent) {
@@ -712,33 +513,14 @@ const RegisterForm = () => {
     </div>
   );
 
-  const renderSelect = (name, options, placeholder, required = false) => (
-    <div className="floating-input relative w-full" data-placeholder={placeholder + (required ? " *" : "")}>
-      <select
-        name={name}
-        value={formData[name] || ""}
-        onChange={handleInputChange}
-        className={`input-field peer ${errors[name] ? "input-error" : ""}`}
-        required={required}
-      >
-        <option value="">{placeholder}</option>
-        {options.map(option => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </select>
-      <label htmlFor={name} className="sr-only">{placeholder}</label>
-      {errors[name] && <p className="error-text">{errors[name]}</p>}
-    </div>
-  );
-
   if (!userType) {
     return (
-      <div className="min-h-screen bg-[#f5f9fc] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="h2-heading mb-4">Please select a user type first</h2>
+          <h2 className="text-2xl font-bold mb-4">Please select a user type first</h2>
           <button 
             onClick={() => navigate("/register-select")} 
-            className="btn btn-primary"
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
             Go Back to Selection
           </button>
@@ -747,348 +529,334 @@ const RegisterForm = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#f5f9fc] flex items-center justify-center p-4 sm:p-8">
-      <div className="w-full max-w-5xl bg-white p-8 sm:p-10 shadow-lg border rounded-xl animate-slideIn">
-        <h2 className="h2-heading text-center mb-1">Register as {userType}</h2>
-        <p className="paragraph text-center mb-6">Please fill in your details to create an account.</p>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Common Fields */}
-          {!(userType === "hospital" || userType === "lab") && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {renderInput("firstName", "text", "First Name", true)}
-              {renderInput("middleName", "text", "Middle Name")}
-              {renderInput("lastName", "text", "Last Name", true)}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {renderInput("phone", "text", "Phone Number", true)}
-            {renderInput("email", "email", "Email", true)}
+  // User-type specific field rendering
+  let userFields = null;
+  if (userType === "patient") {
+    userFields = (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {renderInput("firstName", "text", "First Name", true)}
+          {renderInput("middleName", "text", "Middle Name")}
+          {renderInput("lastName", "text", "Last Name", true)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {renderInput("phone", "text", "Phone Number", true)}
+          {renderInput("email", "email", "Email", true)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {renderInput("aadhaar", "text", "Aadhaar Number", true)}
+          <div className="floating-input relative w-full" data-placeholder="Gender *">
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleInputChange}
+              className={`input-field peer ${errors.gender ? "input-error" : ""}`}
+              required
+            >
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+            {errors.gender && <p className="error-text">{errors.gender}</p>}
           </div>
-
-          {/* Patient Specific Fields */}
-          {userType === "patient" && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {renderInput("aadhaar", "text", "Aadhaar Number", true)}
-                <div className="floating-input relative w-full" data-placeholder="Gender *">
-                  <select
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleInputChange}
-                    className={`input-field peer ${errors.gender ? "input-error" : ""}`}
-                    required
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                  {errors.gender && <p className="error-text">{errors.gender}</p>}
-                </div>
-                {renderInput("dob", "date", "Date of Birth", true)}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderInput("occupation", "text", "Occupation", true)}
-                <PhotoUpload
-                  photo={formData.photo}
-                  onPhotoChange={handlePhotoChange}
+          {renderInput("dob", "date", "Date of Birth", true)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {renderInput("occupation", "text", "Occupation", true)}
+          <PhotoUpload
+            photoPreview={photoPreview}
+            onPhotoChange={handleFileChange}
+            onPreviewClick={() => setIsModalOpen(true)}
+          />
+        </div>
+      </>
+    );
+  } else if (userType === "hospital") {
+    userFields = (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {renderInput("hospitalName", "text", "Hospital Name", true)}
+          {renderInput("headCeoName", "text", "Head/CEO Name", true)}
+          {renderInput("registrationNumber", "text", "Registration Number", true)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {renderInput("gstNumber", "text", "GST Number", true)}
+          <CompactDropdownCheckbox
+            label="Hospital Type"
+            required
+            placeholder="Select Hospital Type"
+            options={hospitalTypeOptions}
+            selected={formData.hospitalType}
+            onChange={(selected) => setFormData(prev => ({ ...prev, hospitalType: selected }))}
+            allowOther
+            otherValue={formData.otherHospitalType}
+            onOtherChange={(value) => setFormData(prev => ({ ...prev, otherHospitalType: value }))}
+          />
+             <NeatFileUpload
+          name="nabhCertificate"
+          accept=".pdf,.jpg,.jpeg,.png"
+          files={formData.nabhCertificate ? [formData.nabhCertificate] : []}
+          onFileChange={handleFileChange}
+          label="NABH Certificate"
+          icon={FileText}
+        />
+        </div>
+        {errors.hospitalType && <p className="error-text">{errors.hospitalType}</p>}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">In-House Lab *</label>
+            <div className="flex items-center space-x-4">
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="inHouseLab"
+                  value="yes"
+                  checked={formData.inHouseLab === "yes"}
+                  onChange={handleInputChange}
+                  className="form-radio text-blue-600"
                 />
-              </div>
-            </>
-          )}
-
-          {/* Hospital Specific Fields */}
-          {userType === "hospital" && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {renderInput("hospitalName", "text", "Hospital Name", true)}
-                {renderInput("headCeoName", "text", "Head/CEO Name", true)}
-                {renderInput("registrationNumber", "text", "Registration Number", true)}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {renderInput("gstNumber", "text", "GST Number", true)}
-                <CompactDropdownCheckbox
-                  label="Hospital Type"
-                  required
-                  placeholder="Select Hospital Type"
-                  options={hospitalTypeOptions}
-                  selected={formData.hospitalType}
-                  onChange={(selected) => setFormData(prev => ({ ...prev, hospitalType: selected }))}
-                  allowOther
-                  otherValue={formData.otherHospitalType}
-                  onOtherChange={(value) => setFormData(prev => ({ ...prev, otherHospitalType: value }))}
+                <span className="ml-2">Yes</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="inHouseLab"
+                  value="no"
+                  checked={formData.inHouseLab === "no"}
+                  onChange={handleInputChange}
+                  className="form-radio text-blue-600"
                 />
-                <PhotoUpload
-                  photo={formData.photo}
-                  onPhotoChange={handlePhotoChange}
-                />
-              </div>
-              {errors.hospitalType && <p className="error-text">{errors.hospitalType}</p>}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium" style={{color: 'var(--primary-color)'}}>In-House Lab *</label>
-                  <div className="flex items-center space-x-4">
-                    <label className="inline-flex items-center">
-                      <input
-                        type="radio"
-                        name="inHouseLab"
-                        value="yes"
-                        checked={formData.inHouseLab === "yes"}
-                        onChange={handleInputChange}
-                        className="form-radio"
-                        style={{color: 'var(--accent-color)'}}
-                      />
-                      <span className="ml-2">Yes</span>
-                    </label>
-                    <label className="inline-flex items-center">
-                      <input
-                        type="radio"
-                        name="inHouseLab"
-                        value="no"
-                        checked={formData.inHouseLab === "no"}
-                        onChange={handleInputChange}
-                        className="form-radio"
-                        style={{color: 'var(--accent-color)'}}
-                      />
-                      <span className="ml-2">No</span>
-                    </label>
-                  </div>
-                  {formData.inHouseLab === "yes" && (
-                    <div className="mt-2">
-                      {renderInput("labLicenseNo", "text", "Lab License Number", true)}
-                    </div>
-                  )}
-                  {errors.inHouseLab && <p className="error-text">{errors.inHouseLab}</p>}
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium" style={{color: 'var(--primary-color)'}}>In-House Pharmacy *</label>
-                  <div className="flex items-center space-x-4">
-                    <label className="inline-flex items-center">
-                      <input
-                        type="radio"
-                        name="inHousePharmacy"
-                        value="yes"
-                        checked={formData.inHousePharmacy === "yes"}
-                        onChange={handleInputChange}
-                        className="form-radio"
-                        style={{color: 'var(--accent-color)'}}
-                      />
-                      <span className="ml-2">Yes</span>
-                    </label>
-                    <label className="inline-flex items-center">
-                      <input
-                        type="radio"
-                        name="inHousePharmacy"
-                        value="no"
-                        checked={formData.inHousePharmacy === "no"}
-                        onChange={handleInputChange}
-                        className="form-radio"
-                        style={{color: 'var(--accent-color)'}}
-                      />
-                      <span className="ml-2">No</span>
-                    </label>
-                  </div>
-                  {formData.inHousePharmacy === "yes" && (
-                    <div className="mt-2">
-                      {renderInput("pharmacyLicenseNo", "text", "Pharmacy License Number", true)}
-                    </div>
-                  )}
-                  {errors.inHousePharmacy && <p className="error-text">{errors.inHousePharmacy}</p>}
-                </div>
-              </div>
-
-              <NeatFileUpload
-                name="nabhCertificate"
-                accept=".pdf,.jpg,.jpeg,.png"
-                files={formData.nabhCertificate}
-                onFileChange={handleFileChange}
-                label="NABH Certificate"
-                icon={FileText}
-              />
+                <span className="ml-2">No</span>
+              </label>
             </div>
-          )}
-
-          {/* Lab Specific Fields */}
-          {userType === "lab" && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="floating-input relative w-full" data-placeholder="Center Type *">
-                  <select
-                    name="centerType"
-                    value={formData.centerType}
-                    onChange={handleInputChange}
-                    className={`input-field peer ${errors.centerType ? "input-error" : ""}`}
-                    required
-                  >
-                    <option value="">Select Center Type</option>
-                    <option value="Lab">Lab</option>
-                    <option value="Scan">Scan</option>
-                    <option value="Lab & Scan">Lab & Scan</option>
-                  </select>
-                  {errors.centerType && <p className="error-text">{errors.centerType}</p>}
-                </div>
-                {renderInput("centerName", "text", "Center Name", true)}
-                {renderInput("ownerFullName", "text", "Owner's Full Name", true)}
+            {formData.inHouseLab === "yes" && (
+              <div className="mt-2">
+                {renderInput("labLicenseNo", "text", "Lab License Number", true)}
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {renderInput("registrationNumber", "text", "Registration Number", true)}
-                {renderInput("licenseNumber", "text", "License Number", true)}
-                {renderInput("gstNumber", "text", "GST Number", true)}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                <PhotoUpload
-                  photo={formData.photo}
-                  onPhotoChange={handlePhotoChange}
+            )}
+            {errors.inHouseLab && <p className="error-text">{errors.inHouseLab}</p>}
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">In-House Pharmacy *</label>
+            <div className="flex items-center space-x-4">
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="inHousePharmacy"
+                  value="yes"
+                  checked={formData.inHousePharmacy === "yes"}
+                  onChange={handleInputChange}
+                  className="form-radio text-blue-600"
                 />
-              </div>
-
-              <CompactDropdownCheckbox
-                label="Available Tests"
-                options={labTestOptions}
-                selected={formData.availableTests}
-                onChange={(selected) => setFormData(prev => ({ ...prev, availableTests: selected }))}
-                required
-                placeholder="Select Available Tests"
-              />
-              {errors.availableTests && <p className="error-text">{errors.availableTests}</p>}
-              
-              <CompactDropdownCheckbox
-                label="Scan Services"
-                options={scanServiceOptions}
-                selected={formData.scanServices}
-                onChange={(selected) => setFormData(prev => ({ ...prev, scanServices: selected }))}
-                placeholder="Select Scan Services"
-              />
-              
-              <CompactDropdownCheckbox
-                label="Special Services"
-                options={specialServicesOptions}
-                selected={formData.specialServices}
-                onChange={(selected) => setFormData(prev => ({ ...prev, specialServices: selected }))}
-                placeholder="Select Special Services"
-              />
-
-              <NeatFileUpload
-                name="certificates"
-                accept=".pdf,.jpg,.jpeg,.png"
-                multiple
-                files={formData.certificates}
-                onFileChange={handleFileChange}
-                label="Upload Certificates"
-                icon={FileText}
-              />
-
-              <NeatFileUpload
-                name="documents"
-                accept=".pdf,.jpg,.jpeg,.png"
-                multiple
-                files={formData.documents}
-                onFileChange={handleFileChange}
-                label="Upload Documents"
-                icon={FileText}
-              />
-            </div>
-          )}
-
-          {/* Doctor Specific Fields */}
-          {userType === "doctor" && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {renderInput("aadhaar", "text", "Aadhaar Number")}
-                <div className="floating-input relative w-full" data-placeholder="Gender *">
-                  <select
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleInputChange}
-                    className={`input-field peer ${errors.gender ? "input-error" : ""}`}
-                    required
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                  {errors.gender && <p className="error-text">{errors.gender}</p>}
-                </div>
-                {renderInput("dob", "date", "Date of Birth", true)}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="floating-input relative w-full" data-placeholder="Registration Number *">
-                  <input
-                    type="text"
-                    name="roleSpecificData.registrationNumber"
-                    placeholder=" "
-                    value={formData.roleSpecificData.registrationNumber}
-                    onChange={handleInputChange}
-                    className={`input-field peer ${errors.registrationNumber ? "input-error" : ""}`}
-                    required
-                  />
-                  {errors.registrationNumber && <p className="error-text">{errors.registrationNumber}</p>}
-                </div>
-                
-                <div className="floating-input relative w-full" data-placeholder="Practice Type *">
-                  <select
-                    name="roleSpecificData.practiceType"
-                    value={formData.roleSpecificData.practiceType}
-                    onChange={handleInputChange}
-                    className={`input-field peer ${errors.practiceType ? "input-error" : ""}`}
-                    required
-                  >
-                    <option value="">Select Practice Type</option>
-                    <option value="Ayush">Ayush</option>
-                    <option value="Allopathy">Allopathy</option>
-                  </select>
-                  {errors.practiceType && <p className="error-text">{errors.practiceType}</p>}
-                </div>
-                
-                <div className="floating-input relative w-full" data-placeholder="Specialization *">
-                  <select
-                    name="roleSpecificData.specialization"
-                    value={formData.roleSpecificData.specialization}
-                    onChange={handleInputChange}
-                    disabled={!formData.roleSpecificData.practiceType}
-                    className={`input-field peer ${errors.specialization ? "input-error" : ""}`}
-                    required
-                  >
-                    <option value="">Select Specialization</option>
-                    {(formData.roleSpecificData.practiceType === "Ayush" ? ayushSpecializations : allopathySpecializations).map(option => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  {errors.specialization && <p className="error-text">{errors.specialization}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="floating-input relative w-full" data-placeholder="Qualification *">
-                  <input
-                    type="text"
-                    name="roleSpecificData.qualification"
-                    placeholder=" "
-                    value={formData.roleSpecificData.qualification}
-                    onChange={handleInputChange}
-                    className={`input-field peer ${errors.qualification ? "input-error" : ""}`}
-                    required
-                  />
-                  {errors.qualification && <p className="error-text">{errors.qualification}</p>}
-                </div>
-                <PhotoUpload
-                  photo={formData.photo}
-                  onPhotoChange={handlePhotoChange}
+                <span className="ml-2">Yes</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="inHousePharmacy"
+                  value="no"
+                  checked={formData.inHousePharmacy === "no"}
+                  onChange={handleInputChange}
+                  className="form-radio text-blue-600"
                 />
-              </div>
+                <span className="ml-2">No</span>
+              </label>
             </div>
-          )}
+            {formData.inHousePharmacy === "yes" && (
+              <div className="mt-2">
+                {renderInput("pharmacyLicenseNo", "text", "Pharmacy License Number", true)}
+              </div>
+            )}
+            {errors.inHousePharmacy && <p className="error-text">{errors.inHousePharmacy}</p>}
+          </div>
+        </div>
+     
+      </>
+    );
+  } else if (userType === "lab") {
+    userFields = (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="floating-input relative w-full" data-placeholder="Center Type *">
+            <select
+              name="centerType"
+              value={formData.centerType}
+              onChange={handleInputChange}
+              className={`input-field peer ${errors.centerType ? "input-error" : ""}`}
+              required
+            >
+              <option value="">Select Center Type</option>
+              <option value="Lab">Lab</option>
+              <option value="Scan">Scan</option>
+              <option value="Lab & Scan">Lab & Scan</option>
+            </select>
+            {errors.centerType && <p className="error-text">{errors.centerType}</p>}
+          </div>
+          {renderInput("centerName", "text", "Center Name", true)}
+          {renderInput("ownerFullName", "text", "Owner's Full Name", true)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {renderInput("registrationNumber", "text", "Registration Number", true)}
+          {renderInput("licenseNumber", "text", "License Number", true)}
+          {renderInput("gstNumber", "text", "GST Number", true)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+          <PhotoUpload
+            photoPreview={photoPreview}
+            onPhotoChange={handleFileChange}
+            onPreviewClick={() => setIsModalOpen(true)}
+          />
+        </div>
+        <CompactDropdownCheckbox
+          label="Available Tests"
+          options={labTestOptions}
+          selected={formData.availableTests}
+          onChange={(selected) => setFormData(prev => ({ ...prev, availableTests: selected }))}
+          required
+          placeholder="Select Available Tests"
+        />
+        {errors.availableTests && <p className="error-text">{errors.availableTests}</p>}
+        <CompactDropdownCheckbox
+          label="Scan Services"
+          options={scanServiceOptions}
+          selected={formData.scanServices}
+          onChange={(selected) => setFormData(prev => ({ ...prev, scanServices: selected }))}
+          placeholder="Select Scan Services"
+        />
+        <CompactDropdownCheckbox
+          label="Special Services"
+          options={specialServicesOptions}
+          selected={formData.specialServices}
+          onChange={(selected) => setFormData(prev => ({ ...prev, specialServices: selected }))}
+          placeholder="Select Special Services"
+        />
+        <NeatFileUpload
+          name="certificates"
+          accept=".pdf,.jpg,.jpeg,.png"
+          multiple
+          files={formData.certificates || []}
+          onFileChange={handleFileChange}
+          label="Upload Certificates"
+          icon={FileText}
+        />
+        <NeatFileUpload
+          name="documents"
+          accept=".pdf,.jpg,.jpeg,.png"
+          multiple
+          files={formData.documents || []}
+          onFileChange={handleFileChange}
+          label="Upload Documents"
+          icon={FileText}
+        />
+      </>
+    );
+  } else if (userType === "doctor") {
+    userFields = (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {renderInput("firstName", "text", "First Name", true)}
+          {renderInput("middleName", "text", "Middle Name")}
+          {renderInput("lastName", "text", "Last Name", true)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {renderInput("phone", "text", "Phone Number", true)}
+          {renderInput("email", "email", "Email", true)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {renderInput("aadhaar", "text", "Aadhaar Number")}
+          <div className="floating-input relative w-full" data-placeholder="Gender *">
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleInputChange}
+              className={`input-field peer ${errors.gender ? "input-error" : ""}`}
+              required
+            >
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+            {errors.gender && <p className="error-text">{errors.gender}</p>}
+          </div>
+          {renderInput("dob", "date", "Date of Birth", true)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="floating-input relative w-full" data-placeholder="Registration Number *">
+            <input
+              type="text"
+              name="roleSpecificData.registrationNumber"
+              placeholder=" "
+              value={formData.roleSpecificData.registrationNumber}
+              onChange={handleInputChange}
+              className={`input-field peer ${errors.registrationNumber ? "input-error" : ""}`}
+              required
+            />
+            {errors.registrationNumber && <p className="error-text">{errors.registrationNumber}</p>}
+          </div>
+          <div className="floating-input relative w-full" data-placeholder="Practice Type *">
+            <select
+              name="roleSpecificData.practiceType"
+              value={formData.roleSpecificData.practiceType}
+              onChange={handleInputChange}
+              className={`input-field peer ${errors.practiceType ? "input-error" : ""}`}
+              required
+            >
+              <option value="">Select Practice Type</option>
+              <option value="Ayush">Ayush</option>
+              <option value="Allopathy">Allopathy</option>
+            </select>
+            {errors.practiceType && <p className="error-text">{errors.practiceType}</p>}
+          </div>
+          <div className="floating-input relative w-full" data-placeholder="Specialization *">
+            <select
+              name="roleSpecificData.specialization"
+              value={formData.roleSpecificData.specialization}
+              onChange={handleInputChange}
+              disabled={!formData.roleSpecificData.practiceType}
+              className={`input-field peer ${errors.specialization ? "input-error" : ""}`}
+              required
+            >
+              <option value="">Select Specialization</option>
+              {(formData.roleSpecificData.practiceType === "Ayush" ? ayushSpecializations : allopathySpecializations).map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+            {errors.specialization && <p className="error-text">{errors.specialization}</p>}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="floating-input relative w-full" data-placeholder="Qualification *">
+            <input
+              type="text"
+              name="roleSpecificData.qualification"
+              placeholder=" "
+              value={formData.roleSpecificData.qualification}
+              onChange={handleInputChange}
+              className={`input-field peer ${errors.qualification ? "input-error" : ""}`}
+              required
+            />
+            {errors.qualification && <p className="error-text">{errors.qualification}</p>}
+          </div>
+          <PhotoUpload
+            photoPreview={photoPreview}
+            onPhotoChange={handleFileChange}
+            onPreviewClick={() => setIsModalOpen(true)}
+          />
+        </div>
+      </>
+    );
+  }
 
-          {/* Address Fields for all user types */}
+  // Address, password, declaration, and submit are common for all
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 sm:p-8">
+      <div className="w-full max-w-5xl bg-white p-8 sm:p-10 shadow-lg border rounded-xl">
+        <h2 className="h2-heading text-center mb-1">Register as {userType}</h2>
+        <p className="text-gray-600 text-center mb-6">Please fill in your details to create an account.</p>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {userFields}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="floating-input relative w-full" data-placeholder="Pincode *">
               <input
@@ -1131,8 +899,6 @@ const RegisterForm = () => {
               />
             </div>
           </div>
-
-          {/* Password Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="floating-input relative w-full" data-placeholder="Create Password *">
               <input
@@ -1146,8 +912,7 @@ const RegisterForm = () => {
               />
               <span
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute top-3 right-3 cursor-pointer"
-                style={{color: 'var(--primary-color)'}}
+                className="absolute top-3 right-3 cursor-pointer text-gray-700"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </span>
@@ -1165,18 +930,14 @@ const RegisterForm = () => {
               />
               <span
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute top-3 right-3 cursor-pointer"
-                style={{color: 'var(--primary-color)'}}
+                className="absolute top-3 right-3 cursor-pointer text-gray-700"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </span>
               {errors.confirmPassword && <p className="error-text">{errors.confirmPassword}</p>}
             </div>
           </div>
-          
-          <div className="text-xs paragraph">Include Capital Letters, Numbers, and Special Characters</div>
-
-          {/* Declaration Checkbox */}
+          <div className="text-xs text-gray-600">Include Capital Letters, Numbers, and Special Characters</div>
           <label className="flex items-start">
             <div className="flex items-center">
               <input
@@ -1195,16 +956,14 @@ const RegisterForm = () => {
                   }
                   setErrors(prev => ({ ...prev, agreeDeclaration: "" }));
                 }}
-                className="focus:ring-2"
-                style={{accentColor: 'var(--accent-color)'}}
+                className="text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm paragraph ml-2">
+              <span className="text-sm text-gray-700 ml-2">
                 I agree to the{" "}
                 <button
                   type="button"
                   onClick={() => navigate("/terms-and-conditions")}
-                  className="underline hover:opacity-80 transition-opacity"
-                  style={{color: 'var(--accent-color)'}}
+                  className="text-blue-600 underline hover:text-blue-800"
                 >
                   declaration / Privacy Policy
                 </button>{" "}
@@ -1213,8 +972,6 @@ const RegisterForm = () => {
             </div>
           </label>
           {errors.agreeDeclaration && <p className="error-text">{errors.agreeDeclaration}</p>}
-
-          {/* Submit Button */}
           <div className="flex justify-center">
             <button
               type="submit"
@@ -1224,13 +981,11 @@ const RegisterForm = () => {
               {isSubmitting || loading ? "Submitting..." : "Verify & Proceed"}
             </button>
           </div>
-          
-          {(error || errors.global) && <p className="error-text text-center mt-2">{error || errors.global}</p>}
-          
-          <div className="text-center mt-4" style={{color: 'var(--primary-color)'}}>
+          {(error || errors.global) && <p className="text-red-600 text-center mt-2">{error || errors.global}</p>}
+          <div className="text-center mt-4 text-blue-900">
             <p>
               Already have an account?{" "}
-              <button
+               <button
                 type="button"
                 onClick={() => navigate("/login")}
                 className="font-semibold hover:opacity-80 transition-opacity"
@@ -1241,6 +996,19 @@ const RegisterForm = () => {
             </p>
           </div>
         </form>
+        {isModalOpen && photoPreview && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white p-4 rounded shadow-lg relative max-w-2xl max-h-[80vh] overflow-auto">
+              <img src={photoPreview} alt="Preview" className="max-h-[60vh] max-w-full object-contain" />
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

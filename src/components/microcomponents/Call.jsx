@@ -1,8 +1,19 @@
+
+
+
+
+
+
+
+
+
+
 import React, { useState, useRef, useEffect } from "react";
 import { FaPhone, FaVideo, FaUser, FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 import { createPortal } from "react-dom";
 import toast, { Toaster } from "react-hot-toast";
 import Consult from "../../assets/CTABG.jpg";
+
 const Modal = ({ show, onClose, children, large, showEndButton }) => show ? createPortal(
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
     <div onClick={onClose} className="absolute inset-0" />
@@ -11,13 +22,69 @@ const Modal = ({ show, onClose, children, large, showEndButton }) => show ? crea
       {children}
     </div>
   </div>, document.body) : null;
+
 const Timer = () => {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => { const i = setInterval(() => setSeconds(s => s + 1), 1000); return () => clearInterval(i); }, []);
   const f = s => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
   return <p className="text-sm text-gray-600">Duration: {f(seconds)}</p>;
 };
-export default function TeleConsultFlow({ phone }) {
+
+const VideoModal = ({ show, onClose, videoBlob, patientName }) => show ? createPortal(
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+    <div className="relative bg-white p-6 rounded-xl w-[90%] max-w-4xl max-h-[90vh] overflow-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-semibold">
+          Consultation Recording - {patientName}
+        </h3>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700 text-2xl"
+        >
+          ×
+        </button>
+      </div>
+      
+      <div className="bg-black rounded-lg overflow-hidden mb-4">
+        <video
+          controls
+          className="w-full h-96 object-contain"
+          src={videoBlob ? URL.createObjectURL(videoBlob) : undefined}
+        >
+          <p className="text-center text-white p-8">
+            Unable to load video recording.
+          </p>
+        </video>
+      </div>
+      
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+        >
+          Close
+        </button>
+        <button
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          onClick={() => {
+            if (videoBlob) {
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(videoBlob);
+              a.download = `consult_${patientName}_${Date.now()}.webm`;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              toast.success("Video download started");
+            }
+          }}
+        >
+          Download Video
+        </button>
+      </div>
+    </div>
+  </div>, document.body) : null;
+
+export default function TeleConsultFlow({ phone, patientName, onVideoRecorded }) {
   const [open, setOpen] = useState(false), [step, setStep] = useState(1), [callType, setCallType] = useState(""), [amount, setAmount] = useState(""), [stream, setStream] = useState(null), [participants, setParticipants] = useState([]), [audioEnabled, setAudioEnabled] = useState(true), [error, setError] = useState(""), [mediaRecorder, setMediaRecorder] = useState(null);
   const chunks = useRef([]);
   const floatLabel = "absolute left-3 text-gray-400 transition-all duration-200 bg-white px-1 pointer-events-none peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:top-[-0.6rem] peer-focus:text-xs peer-focus:text-[var(--primary-color)] top-[-0.6rem] text-xs";
@@ -28,15 +95,30 @@ export default function TeleConsultFlow({ phone }) {
       setStream(mediaStream); setParticipants([{ id: "You", stream: mediaStream }]);
       const recorder = new MediaRecorder(mediaStream);
       recorder.ondataavailable = e => chunks.current.push(e.data);
-      recorder.onstop = () => { const blob = new Blob(chunks.current, { type: "video/webm" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `consult_${Date.now()}.webm`; document.body.appendChild(a); a.click(); a.remove(); };
+      recorder.onstop = () => { 
+        const blob = new Blob(chunks.current, { type: "video/webm" }); 
+        if (onVideoRecorded) {
+          onVideoRecorded(blob);
+        }
+        toast.success("Consultation recorded successfully!");
+      };
       recorder.start(); setMediaRecorder(recorder);
     } catch (err) { setError("Camera or microphone access denied."); }
   };
   const toggleAudio = () => { if (stream) { const audioTrack = stream.getAudioTracks()[0]; audioTrack.enabled = !audioTrack.enabled; setAudioEnabled(audioTrack.enabled); } };
+  
+  const handleEndConsultation = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    toast.success("Consultation Ended");
+    reset();
+  };
+  
   return <>
     <Toaster position="top-center" />
     <button onClick={() => setOpen(true)} className="p-3 view-btn rounded-full hover:bg-[var(--accent-color)] hover:text-white transition"><FaPhone className="rotate-[100deg]" /></button>
-    <Modal show={open} onClose={() => { if (step === 3 && callType === "video") toast.success("Consultation Ended"); reset(); }} large={step === 3 && callType === "video"} showEndButton={step === 3 && callType === "video"}>
+    <Modal show={open} onClose={handleEndConsultation} large={step === 3 && callType === "video"} showEndButton={step === 3 && callType === "video"}>
       <h2 className="h4-heading font-semibold mb-2">Tele Consult</h2>
       {step === 1 && <div className="space-y-4">
         <div><p className="paragraph">Consultation Type</p>
@@ -90,3 +172,13 @@ export default function TeleConsultFlow({ phone }) {
     </Modal>
   </>;
 }
+
+
+
+
+
+
+
+
+
+

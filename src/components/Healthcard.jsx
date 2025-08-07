@@ -1,258 +1,139 @@
-// import React, { useState, useEffect, useRef } from "react";
-// import { useNavigate } from "react-router-dom";
-// import { FaDownload } from "react-icons/fa";
-// import AVCard from "./microcomponents/AVCard";
-// import { useSelector } from "react-redux";
-// import axios from "axios";
-
-// const API_BASE_URL = "https://6801242781c7e9fbcc41aacf.mockapi.io/api/AV1";
-// const CARD_API_URL = "https://6810972027f2fdac2411f6a5.mockapi.io/healthcard";
-
-// function Healthcard() {
-//   const [userData, setUserData] = useState(null);
-//   const [healthId, setHealthId] = useState("");
-//   const [isCardGenerated, setIsCardGenerated] = useState(false);
-//   const cardRef = useRef();
-
-//   const navigate = useNavigate();
-//   const userEmail = useSelector((state) => state.auth.user?.email);
-
-//   // Simulated address fetch function — replace with real Aadhaar address API
-//   const getAddressFromAadhaar = async (aadhaar) => {
-//     return {
-//       country: "India",
-//       state: "Maharashtra",
-//       city: "Mumbai",
-//       pincode: "400001",
-//     };
-//   };
-
-//   const generateHealthId = (gender, state, city, dob) =>
-//     !gender || !state || !city || !dob
-//       ? ""
-//       : `AV${gender.charAt(0).toUpperCase()}${state.slice(0, 2).toUpperCase()}${city.slice(0, 2).toUpperCase()}${dob.replace(/-/g, "")}`;
-
-//   useEffect(() => {
-//     if (!userEmail) {
-//       alert("No logged-in user found. Please log in.");
-//       navigate("/login");
-//       return;
-//     }
-
-//     axios
-//       .get(`${API_BASE_URL}/users?email=${encodeURIComponent(userEmail)}`)
-//       .then((res) => {
-//         if (res.data.length > 0) {
-//           setUserData(res.data[0]);
-//         } else {
-//           alert("User not found.");
-//         }
-//       })
-//       .catch((err) => {
-//         console.error("Error loading user profile:", err);
-//         alert("Error loading user profile.");
-//       });
-//   }, [userEmail, navigate]);
-
-//   useEffect(() => {
-//     const autoGenerateCard = async () => {
-//       if (!userData?.aadhaar || isCardGenerated) return;
-
-//       try {
-//         const address = await getAddressFromAadhaar(userData.aadhaar);
-//         const { state, city, country, pincode } = address;
-
-//         const genId = generateHealthId(userData.gender, state, city, userData.dob);
-//         if (!genId) return;
-
-//         const { data } = await axios.get(CARD_API_URL);
-//         const existing = data.find((c) => c.aadhaar === userData.aadhaar);
-
-//         if (existing) {
-//           setHealthId(existing.healthId);
-//           localStorage.setItem("healthId", existing.healthId);
-//           return setIsCardGenerated(true);
-//         }
-
-//         await axios.post(CARD_API_URL, {
-//           firstName: userData.firstName,
-//           lastName: userData.lastName,
-//           gender: userData.gender,
-//           phone: userData.phone,
-//           dob: userData.dob,
-//           aadhaar: userData.aadhaar,
-//           state,
-//           city,
-//           country,
-//           pincode,
-//           email: userData.email || "",
-//           healthId: genId,
-//         });
-
-//         setHealthId(genId);
-//         localStorage.setItem("healthId", genId);
-//         setIsCardGenerated(true);
-//       } catch (e) {
-//         console.error("Auto generation failed", e);
-//         alert("Could not auto-generate Health Card.");
-//       }
-//     };
-
-//     autoGenerateCard();
-//   }, [userData, isCardGenerated]);
-
-//   if (!userData) return <div className="text-center p-10">Loading user profile...</div>;
-
-//   if (isCardGenerated) {
-//     return (
-//       <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface)] p-10 print:bg-[var(--color-surface)]">
-//         <div className="max-w-md w-full flex flex-col items-center gap-4">
-//           <AVCard
-//             initialName={`${userData.firstName} ${userData.lastName}`}
-//             initialCardNumber={healthId}
-//             initialGender={userData.gender}
-//             initialPhoneNumber={userData.phone}
-//             imageUrl={userData?.photo || "/default-avatar.png"}
-//             initialDob={userData.dob}
-//             isReadOnly
-//             ref={cardRef}
-//           />
-//           <div className="w-full flex justify-center mt-4">
-//             <button
-//               onClick={() => {
-//                 const prevTitle = document.title;
-//                 document.title = "AV Health Card";
-//                 window.print();
-//                 document.title = prevTitle;
-//               }}
-//               className="flex items-center gap-2 bg-[var(--primary-color)] text-white font-semibold py-2 px-4 rounded-lg hover:bg-[#123456]"
-//             >
-//               <FaDownload /> Download Healthcard
-//             </button>
-//           </div>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="min-h-screen flex items-center justify-center text-center text-lg text-gray-600 p-10">
-//       <p>Generating your Health Card...</p>
-//     </div>
-//   );
-// }
-
-// export default Healthcard;
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowRight, FaDownload, FaArrowLeft } from "react-icons/fa";
-import { useSelector } from "react-redux";
+import { FaDownload,FaArrowRight  } from "react-icons/fa";
 import AVCard from "./microcomponents/AVCard";
+import { useSelector } from "react-redux";
 import axios from "axios";
 
+const API_BASE_URL = "https://6801242781c7e9fbcc41aacf.mockapi.io/api/AV1";
+const CARD_API_URL = "https://6810972027f2fdac2411f6a5.mockapi.io/healthcard";
+
 function Healthcard() {
-  const userData = useSelector(s => s.auth.user);
-  const [healthId, setHealthId] = useState(""), [state, setState] = useState(""), [city, setCity] = useState(""), [isCardGenerated, setIsCardGenerated] = useState(false);
-  const navigate = useNavigate(), cardRef = useRef();
+  const [userData, setUserData] = useState(null);
+  const [healthId, setHealthId] = useState("");
+  const [isCardGenerated, setIsCardGenerated] = useState(false);
+  const cardRef = useRef();
 
+  const navigate = useNavigate();
+  const userEmail = useSelector((state) => state.auth.user?.email);
+
+  // Simulated address fetch function — replace with real Aadhaar address API
   useEffect(() => {
-    const storedId = localStorage.getItem("healthId");
-    if (storedId) { setHealthId(storedId); setIsCardGenerated(true); }
-  }, []);
+  const autoGenerateCard = async () => {
+    if (!userData?.aadhaar || isCardGenerated) return;
 
-  const generateHealthId = (g, s, c, d) => (!g || !s || !c || !d) ? "" : `AV${g.charAt(0).toUpperCase()}${s}${c}${d.replace(/-/g, "")}`;
-
-  const handleGenerateCard = async () => {
-    if (!state || !city) return alert("Please select both State and City.");
-    if (!userData.aadhaar) return alert("User Aadhaar number is required.");
-    const genId = generateHealthId(userData.gender, state, city, userData.dob);
-    if (!genId) return alert("Unable to generate Health ID.");
     try {
-      const { data } = await axios.get("https://6810972027f2fdac2411f6a5.mockapi.io/healthcard");
-      const existing = data.find(c => c.aadhaar === userData.aadhaar);
+      const { state, city, country, pincode } = userData;
+
+      const genId = generateHealthId(userData.gender, state, city, userData.dob);
+      if (!genId) return;
+
+      const { data } = await axios.get(CARD_API_URL);
+      const existing = data.find((c) => c.aadhaar === userData.aadhaar);
+
       if (existing) {
         setHealthId(existing.healthId);
         localStorage.setItem("healthId", existing.healthId);
         return setIsCardGenerated(true);
       }
-      await axios.post("https://6810972027f2fdac2411f6a5.mockapi.io/healthcard", {
-        firstName: userData.firstName, lastName: userData.lastName, gender: userData.gender,
-        phone: userData.phone, dob: userData.dob, aadhaar: userData.aadhaar,
-        state, city, email: userData.email || "", healthId: genId
+
+      await axios.post(CARD_API_URL, {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        gender: userData.gender,
+        phone: userData.phone,
+        dob: userData.dob,
+        aadhaar: userData.aadhaar,
+        state,
+        city,
+        country,
+        pincode,
+        email: userData.email || "",
+        healthId: genId,
       });
+
       setHealthId(genId);
       localStorage.setItem("healthId", genId);
       setIsCardGenerated(true);
-    } catch (e) { console.error(e); alert("Error generating health card. Please try again."); }
+    } catch (e) {
+      console.error("Auto generation failed", e);
+      alert("Could not auto-generate Health Card.");
+    }
   };
 
-  if (isCardGenerated) return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface)] p-10 print:bg-[var(--color-surface)]">
-      <div className="max-w-md w-full flex flex-col items-center gap-4">
-        <AVCard
-          initialName={`${userData?.firstName || "First"} ${userData?.lastName || "Last"}`}
-          initialCardNumber={healthId}
-          initialGender={userData?.gender || ""}
-          initialPhoneNumber={userData?.phone || ""}
-          initialPhotoUrl="/default-avatar.png"
-          initialDob={userData?.dob || ""}
-          isReadOnly ref={cardRef}
-        />
-        <div className="w-full flex justify-between mt-4">
-          <button onClick={() => setIsCardGenerated(false)} className="flex items-center gap-2 text-gray-800 font-semibold py-2 px-4 rounded-lg"><FaArrowLeft /> Back</button>
-          <button onClick={() => { const t=document.title; document.title="AV Health Card"; window.print(); document.title=t; }} className="flex items-center gap-2 bg-[var(--primary-color)] text-[var(--color-surface)] font-semibold py-2 px-4 rounded-lg hover:bg-[#123456]"><FaDownload /> Download</button>
-        </div>
-      </div>
-    </div>
-  );
+  autoGenerateCard();
+}, [userData, isCardGenerated]);
 
-  return (
-    <div className="min-h-screen w-full bg-[#f5f9fc] flex items-center justify-center px-4 py-10">
-      <div className="bg-[var(--color-surface)] rounded-3xl shadow-lg p-6 md:p-10 w-full max-w-6xl flex flex-col md:flex-row gap-10">
-        <div className="w-full md:w-1/2 flex items-center justify-center">
+
+  const generateHealthId = (gender, state, city, dob) =>
+    !gender || !state || !city || !dob
+      ? ""
+      : `AV${gender.charAt(0).toUpperCase()}${state.slice(0, 2).toUpperCase()}${city.slice(0, 2).toUpperCase()}${dob.replace(/-/g, "")}`;
+
+  useEffect(() => {
+    if (!userEmail) {
+      alert("No logged-in user found. Please log in.");
+      navigate("/login");
+      return;
+    }
+
+    axios
+      .get(`${API_BASE_URL}/users?email=${encodeURIComponent(userEmail)}`)
+      .then((res) => {
+        if (res.data.length > 0) {
+          setUserData(res.data[0]);
+        } else {
+          alert("User not found.");
+        }
+      })
+      .catch((err) => {
+        console.error("Error loading user profile:", err);
+        alert("Error loading user profile.");
+      });
+  }, [userEmail, navigate]);
+
+
+
+  if (!userData) return <div className="text-center p-10">Loading user profile...</div>;
+
+  if (isCardGenerated) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface)] p-10 print:bg-[var(--color-surface)]">
+        <div className="max-w-md w-full flex flex-col items-center ">
           <AVCard
-            initialName={`${userData?.firstName || "First"} ${userData?.lastName || "Last"}`}
-            initialCardNumber=""
-            initialGender={userData?.gender || ""}
-            initialPhoneNumber={userData?.phone || ""}
-            initialPhotoUrl="/default-avatar.png"
-            initialDob={userData?.dob || ""}
+            initialName={`${userData.firstName} ${userData.lastName}`}
+            initialCardNumber={healthId}
+            initialGender={userData.gender}
+            initialPhoneNumber={userData.phone}
+            imageUrl={userData?.photo || "/default-avatar.png"}
+            initialDob={userData.dob}
             isReadOnly
+            ref={cardRef}
           />
-        </div>
-        <div className="w-full md:w-1/2 flex flex-col justify-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-center mb-6 text-[var(--primary-color)]">Welcome to <span className="text-[var(--accent-color)]">AV Swasthya</span></h1>
-          <form className="space-y-4 text-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div><strong>First Name:</strong> {userData?.firstName || "N/A"}</div>
-              <div><strong>Last Name:</strong> {userData?.lastName || "N/A"}</div>
-              <div><strong>DOB:</strong> {userData?.dob || "N/A"}</div>
-              <div><strong>Gender:</strong> {userData?.gender || "N/A"}</div>
-              <div><strong>Phone:</strong> {userData?.phone || "N/A"}</div>
-              <div><strong>Aadhaar:</strong> {userData?.aadhaar || "N/A"}</div>
-            </div>
-            <div className="flex gap-2 mb-4">
-              <select className=" w-1/2 input-field" value={state} onChange={e => setState(e.target.value)} aria-label="Select State">
-                <option value="">State</option><option value="MH">Maharashtra</option><option value="DL">Delhi</option><option value="KA">Karnataka</option>
-              </select>
-              <select className=" w-1/2 input-field" value={city} onChange={e => setCity(e.target.value)} aria-label="Select City">
-                <option value="">City</option><option value="CSTM">Mumbai (CSTM)</option><option value="NDLS">New Delhi (NDLS)</option><option value="SBC">Bangalore (SBC)</option>
-              </select>
-            </div>
-            <div className="flex gap-4 mt-6 justify-center">
-              <button type="button" className="btn btn-primary group" onClick={handleGenerateCard}>
-  <span className="relative z-10 transition-colors duration-300 group-hover:text-white">
-    Generate Healthcard
-  </span>
-</button>
-              <button type="button" className="flex px-2 view-btn" onClick={() => navigate("/login")}>Skip & Continue <FaArrowRight className="m-1" /></button>
-            </div>
-          </form>
+          <div className="w-full flex justify-center gap-4 mt-4">
+            <button
+              onClick={() => {
+                const prevTitle = document.title;
+                document.title = "AV Health Card";
+                window.print();
+                document.title = prevTitle;
+              }}
+              className="flex items-center gap-2 bg-[var(--primary-color)] text-white font-semibold py-2 px-4 rounded-lg hover:bg-[#123456]"
+            >
+              <FaDownload /> Download 
+            </button>
+             <button type="button" className="flex px-2 view-btn" onClick={() => navigate("/login")}>Login <FaArrowRight className="m-1" /></button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // return (
+  //   <div className="min-h-screen flex items-center justify-center text-center text-lg text-gray-600 p-10">
+  //     <p>Generating your Health Card...</p>
+  //   </div>
+  // );
 }
 
 export default Healthcard;

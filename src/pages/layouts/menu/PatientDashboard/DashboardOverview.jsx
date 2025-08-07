@@ -186,12 +186,12 @@ const DashboardOverview = () => {
   };
 
   const summaryCards = [
-    { label: "Heart Rate", value: healthSummary.heartRate, unit: "bpm", icon: <FaHeartbeat className="text-xl" />, color: "card-icon-primary card-icon-white" },
-    { label: "Temperature", value: healthSummary.temperature, unit: "°C", icon: <FaThermometerHalf className="text-xl" />, color: "card-icon-accent card-icon-white" },
-    { label: "Blood Sugar", value: healthSummary.bloodSugar, unit: "mg/dL", icon: <FaTint className="text-xl" />, color: "card-icon-accent card-icon-white" },
-    { label: "Blood Pressure", value: healthSummary.bloodPressure, unit: "mmHg", icon: <FaStethoscope className="text-xl" />, color: "card-icon-primary card-icon-white" },
-    { label: "Respiratory Rate", value: healthSummary.respiratoryRate, unit: "breaths/min", icon: <Activity className="w-5 h-5" />, color: "card-icon-accent card-icon-white" },
-    { label: "SpO₂", value: healthSummary.spo2, unit: "%", icon: <Droplets className="w-5 h-5" />, color: "card-icon-primary card-icon-white" },
+    { label: "Heart Rate", value: healthSummary.heartRate, unit: "bpm", icon: <FaHeartbeat className="text-base text-[var(--primary-color)]" /> },
+    { label: "Temperature", value: healthSummary.temperature, unit: "°C", icon: <FaThermometerHalf className="text-base text-[var(--accent-color)]" /> },
+    { label: "Blood Sugar", value: healthSummary.bloodSugar, unit: "mg/dL", icon: <FaTint className="text-base text-[var(--accent-color)]" /> },
+    { label: "Blood Pressure", value: healthSummary.bloodPressure, unit: "mmHg", icon: <FaStethoscope className="text-base text-[var(--primary-color)]" /> },
+    { label: "Respiratory Rate", value: healthSummary.respiratoryRate, unit: "breaths/min", icon: <Activity className="w-4 h-4 text-[var(--accent-color)]" /> },
+    { label: "SpO₂", value: healthSummary.spo2, unit: "%", icon: <Droplets className="w-4 h-4 text-[var(--primary-color)]" /> },
   ];
 
   const getStatusBadge = (status, rejectReason) => status === "Confirmed"
@@ -254,26 +254,23 @@ const DashboardOverview = () => {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {summaryCards.map((item, idx) => {
-                const theme = item.color.match(/card-icon-(primary|accent)/)?.[1] || "primary";
                 const hasData = item.value !== undefined && item.value !== null && item.value !== "" && item.value !== "N/A";
                 return (
-                  <div key={idx} className={`card-stat card-border-${theme} card-animate-pulse hover:shadow-lg transition-all duration-300 p-4`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`card-icon ${item.color} shadow-lg`}>{item.icon}</div>
-                        <div>
-                          <h5 className="card-stat-label font-semibold text-sm">{item.label}</h5>
-                          {hasData ? (
-                            <div className="flex items-baseline space-x-1">
-                              <span className="card-stat-count text-lg">{item.value}</span>
-                              <span className="text-xs paragraph">{item.unit}</span>
-                            </div>
-                          ) : (
-                            <button onClick={handleOpenModal} className="text-xs mt-1 px-2 py-1 bg-gray-100 paragraph hover:bg-[var(--accent-color)] hover:text-white rounded-full transition-all duration-200">
-                              + Add
-                            </button>
-                          )}
-                        </div>
+                  <div key={idx} className="card-stat hover:shadow-lg transition-all duration-300 p-4">
+                    <div className="flex items-center space-x-3">
+                      {item.icon}
+                      <div>
+                        <h5 className="card-stat-label font-semibold text-sm">{item.label}</h5>
+                        {hasData ? (
+                          <div className="flex items-baseline space-x-1">
+                            <span className="card-stat-count text-lg">{item.value}</span>
+                            <span className="text-xs paragraph">{item.unit}</span>
+                          </div>
+                        ) : (
+                          <button onClick={handleOpenModal} className="text-xs mt-1 px-2 py-1 bg-gray-100 paragraph hover:bg-[var(--accent-color)] hover:text-white rounded-full transition-all duration-200">
+                            + Add
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

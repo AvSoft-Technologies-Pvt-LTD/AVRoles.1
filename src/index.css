@@ -751,3 +751,23 @@ body { @apply font-sans text-[#0E1630] bg-white leading-relaxed; font-family:var
 .clicked-row {
   background-color: #e0f7fa; /* Light blue highlight */
 }
+@keyframes shine-blink {
+  0% {
+    text-shadow: 0 0 2px #fff, 0 0 5px #FF4D4D, 0 0 10px #FF4D4D;
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    text-shadow: 0 0 8px #fff, 0 0 12px #FF4D4D, 0 0 20px #FF0000;
+    transform: scale(1.15);
+    opacity: 0.7;
+  }
+  100% {
+    text-shadow: 0 0 2px #fff, 0 0 5px #FF4D4D, 0 0 10px #FF4D4D;
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.shine-blink {
+  animation: shine-blink 1s infinite;
+}

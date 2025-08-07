@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
-import axios from "axios";emailjs
+import axios from "axios";
 import html2pdf from "html2pdf.js";
 import emailjs from "emailjs-com";
 import DynamicTable from "../../../../components/microcomponents/DynamicTable";
@@ -12,9 +12,10 @@ import {
 const PrintContent = ({ requestData, selectedRecord, formData }) => (
   <div style={{ fontFamily: "Arial, sans-serif", maxWidth: "800px", margin: "0 auto", padding: "20px" }}>
     <div className="header" style={{ textAlign: "center", borderBottom: "2px solid #333", paddingBottom: "20px", marginBottom: "30px" }}>
-      <h1 style={{ fontSize: "24px", fontWeight: "bold", margin: "0 0 10px 0", textTransform: "uppercase" }}>SECOND OPINION REQUEST</h1>
+      <h1 className="h4-heading">SECOND OPINION REQUEST</h1>
       <p style={{ fontSize: "16px", color: "#666", margin: "0" }}>Expert Medical Consultation Form</p>
     </div>
+
     <div className="request-info" style={{ marginBottom: "25px", padding: "15px", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
       <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "15px", color: "#333" }}>Request Information</h3>
       <p><strong>Request ID:</strong> {requestData.id}</p>
@@ -48,10 +49,6 @@ const PrintContent = ({ requestData, selectedRecord, formData }) => (
           <div className="detail-value" style={{ color: "#333" }}>{value || "Not specified"}</div>
         </div>
       ))}
-    </div>
-    <div className="footer" style={{ borderTop: "1px solid #ddd", paddingTop: "20px", textAlign: "center", color: "#666", fontSize: "14px" }}>
-      <p style={{ margin: "5px 0" }}>This is an official second opinion request generated on {new Date().toLocaleString()}</p>
-      <p style={{ margin: "5px 0" }}>For any queries, please contact the medical records department.</p>
     </div>
   </div>
 );
@@ -138,18 +135,71 @@ const MedicalRecordsDetailsPreview = ({ selectedRecord, onClose }) => {
               Close
             </button>
           </div>
-          <div className="flex border-gray-200 mb-6">
-            {detailsTabs.map((tab) => {
-              const IconComponent = tab.icon;
-              return (
-                <button key={tab.id} onClick={() => setDetailsActiveTab(tab.id)} className={`flex items-center gap-2 px-6 py-3 font-medium transition-colors duration-300 ${detailsActiveTab === tab.id ? "border-b-2 text-blue-600 border-blue-600" : "text-gray-500 hover:text-blue-600"}`}>
-                  <IconComponent size={18} />
-                  {tab.label}
-                </button>
-              );
-            })}
+          <div className="bg-gradient-to-r from-[#01B07A] to-[#1A223F] rounded-xl p-6 mb-6 text-white">
+            <h3 className="text-2xl font-bold mb-4">{selectedRecord.patientName}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-6 text-sm">
+              <div>Age: {selectedRecord.age}</div>
+              <div>Gender: {selectedRecord.sex}</div>
+              <div>Hospital: {selectedRecord.hospitalName}</div>
+              <div>Diagnosis: {selectedRecord.diagnosis}</div>
+              <div>K/C/O: {selectedRecord["K/C/O"] ?? "--"}</div>
+            </div>
           </div>
-          <div className="animate-slide-fade-in">{renderTabContent()}</div>
+          <section className="mb-6">
+            <h4 className="text-xl font-semibold text-gray-800 mb-4">Vitals Summary</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              {Object.entries(selectedRecord.vitals || {}).map(([key, value]) => (
+                <div key={key} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div className="text-xs font-medium text-gray-600 mb-1">{key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}</div>
+                  <div className="text-sm font-semibold text-gray-800">{value}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="mb-6">
+            <h4 className="text-xl font-semibold text-gray-800 mb-4">Medical Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {Object.entries(selectedRecord?.medicalDetails || {}).map(([label, value]) => (
+                <div key={label} className="bg-white p-6 rounded-xl border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="font-bold text-sm text-gray-600 mb-2">{label.replace(/([A-Z])/g, " $1")}</div>
+                  <div className="text-gray-800 text-sm">{value || "N/A"}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="mb-6">
+            <h4 className="text-xl font-semibold text-gray-800 mb-4">Prescriptions</h4>
+            <DynamicTable
+              columns={[
+                { header: "Date", accessor: "date" },
+                { header: "Doctor Name", accessor: "doctorName" },
+                { header: "Medicines", accessor: "medicines" },
+                { header: "Instructions", accessor: "instructions" },
+              ]}
+              data={selectedRecord.prescriptionsData || []}
+            />
+          </section>
+          <section className="mb-6">
+            <h4 className="text-xl font-semibold text-gray-800 mb-4">Lab Tests</h4>
+            <DynamicTable
+              columns={[
+                { header: "Date", accessor: "date" },
+                { header: "Test Name", accessor: "testName" },
+                { header: "Result", accessor: "result" },
+                { header: "Normal Range", accessor: "normalRange" },
+                {
+                  header: "Status",
+                  accessor: "status",
+                  cell: (row) => (
+                    <span className={`text-sm font-semibold px-2 py-1 rounded-full ${row.status === "Normal" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                      {row.status}
+                    </span>
+                  ),
+                },
+              ]}
+              data={selectedRecord.labTestsData || []}
+            />
+          </section>
         </div>
       </div>
     </div>
@@ -183,61 +233,69 @@ const SecondOpinion = () => {
   const generateMessageContent = () => {
     const requestData = generateRequestData();
     return { subject: `Second Opinion Request - ${requestData.patientInfo.name} (${requestData.id})`, body: `SECOND OPINION REQUEST\n\nRequest Details:\n• Request ID: ${requestData.id}\n• Date: ${requestData.requestDate}\n• Status: Pending Review\n\nPatient Information:\n• Name: ${requestData.patientInfo.name}\n• Age: ${requestData.patientInfo.age}\n• Gender: ${requestData.patientInfo.sex}\n• Hospital: ${requestData.patientInfo.hospitalName}\n• Diagnosis: ${requestData.patientInfo.diagnosis}\n• Visit Date: ${requestData.patientInfo.visitDate}\n• K/C/O: ${selectedRecord["K/C/O"] ?? "--"}\n\nConsultation Request Details:\n• Selected Doctor: ${formData.selectedDoctor || "Not specified"}\n• Urgency Level: ${formData.urgencyLevel || "Not specified"}\n• Preferred Mode: ${formData.preferredMode || "Not specified"}\n• Additional Notes: ${formData.additionalNotes || "Not specified"}\n\nMedical Records: Complete patient medical history, vitals, prescriptions, and lab reports are included with this request.\n\nGenerated on: ${new Date().toLocaleString()}\nFor queries, please contact the medical records department.` };
+  }
+
+  const generatePrintTemplate = () => {
+    const requestData = generateRequestData();
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
+          <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">SECOND OPINION REQUEST</h1>
+          <p style="font-size: 16px; color: #666; margin: 0;">Expert Medical Consultation Form</p>
+        </div>
+        
+        <div style="margin-bottom: 25px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+          <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333;">Request Information</h3>
+          <p style="margin: 5px 0;"><strong>Request ID:</strong> ${requestData.id}</p>
+          <p style="margin: 5px 0;"><strong>Date of Request:</strong> ${requestData.requestDate}</p>
+          <p style="margin: 5px 0;"><strong>Status:</strong> Pending Review</p>
+        </div>
+        
+        <div style="margin-bottom: 25px; padding: 15px; background-color: #e8f5e8; border-radius: 8px; border: 1px solid #4caf50;">
+          <h4 style="font-size: 16px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">✓ Medical Records Attached</h4>
+          <p style="margin: 0; color: #2e7d32;">Complete patient medical history, vitals, prescriptions, and lab reports are included with this request.</p>
+        </div>
+        
+        <div style="margin-bottom: 25px;">
+          <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Patient Information</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Name:</strong> ${requestData.patientInfo.name}</div>
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Age:</strong> ${requestData.patientInfo.age}</div>
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Gender:</strong> ${requestData.patientInfo.sex}</div>
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Patient ID:</strong> ${requestData.patientInfo.patientId}</div>
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Hospital:</strong> ${requestData.patientInfo.hospitalName}</div>
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Diagnosis:</strong> ${requestData.patientInfo.diagnosis}</div>
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Visit Date:</strong> ${requestData.patientInfo.visitDate}</div>
+            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>K/C/O:</strong> ${selectedRecord["K/C/O"] ?? "--"}</div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+          <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Consultation Request Details</h3>
+          <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px;">
+            <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Selected Doctor:</div>
+            <div style="color: #333;">${formData.selectedDoctor || "Not specified"}</div>
+          </div>
+          <div style="margin-bottom: 15px; padding: 10px, border: 1px solid #e0e0e0; border-radius: 6px;">
+            <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Urgency Level:</div>
+            <div style="color: #333;">${formData.urgencyLevel || "Not specified"}</div>
+          </div>
+          <div style="margin-bottom: 15px; padding: 10px, border: 1px solid #e0e0e0; border-radius: 6px;">
+            <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Preferred Mode:</div>
+            <div style="color: #333;">${formData.preferredMode || "Not specified"}</div>
+          </div>
+          <div style="margin-bottom: 15px; padding: 10px, border: 1px solid #e0e0e0; border-radius: 6px;">
+            <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Additional Notes:</div>
+            <div style="color: #333;">${formData.additionalNotes || "Not specified"}</div>
+          </div>
+        </div>
+      </div>
+    `;
   };
 
   const generatePDF = async () => {
     const element = document.createElement("div");
-    element.innerHTML = `<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-      <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
-        <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">SECOND OPINION REQUEST</h1>
-        <p style="font-size: 16px; color: #666; margin: 0;">Expert Medical Consultation Form</p>
-      </div>
-      <div style="margin-bottom: 25px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
-        <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333;">Request Information</h3>
-        <p><strong>Request ID:</strong> ${generateRequestData().id}</p>
-        <p><strong>Date of Request:</strong> ${generateRequestData().requestDate}</p>
-        <p><strong>Status:</strong> Pending Review</p>
-      </div>
-      <div style="margin-bottom: 25px; padding: 15px; background-color: #e8f5e8; border-radius: 8px; border: 1px solid #4caf50;">
-        <h4 style="font-size: 16px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">✓ Medical Records Attached</h4>
-        <p style="margin: 0; color: #2e7d32;">Complete patient medical history, vitals, prescriptions, and lab reports are included with this request.</p>
-      </div>
-      <div style="margin-bottom: 25px;">
-        <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Patient Information</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-          <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Name:</strong> ${selectedRecord.patientName}</div>
-          <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Age:</strong> ${selectedRecord.age}</div>
-          <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Gender:</strong> ${selectedRecord.sex}</div>
-          <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Patient ID:</strong> ${selectedRecord.id}</div>
-          <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Hospital:</strong> ${selectedRecord.hospitalName}</div>
-          <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;">< strong>Diagnosis:</strong> ${selectedRecord.diagnosis}</div>
-          <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>K/C/O:</strong> ${selectedRecord["K/C/O"] ?? "--"}</div>
-        </div>
-      </div>
-      <div style="margin-bottom: 30px;">
-        <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Consultation Request Details</h3>
-        <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px;">
-          <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Selected Doctor:</div>
-          <div style="color: #333;">${formData.selectedDoctor || "Not specified"}</div>
-        </div>
-        <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px;">
-          <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Urgency Level:</div>
-          <div style="color: #333;">${formData.urgencyLevel || "Not specified"}</div>
-        </div>
-        <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px;">
-          <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Preferred Mode:</div>
-          <div style="color: #333;">${formData.preferredMode || "Not specified"}</div>
-        </div>
-        <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px;">
-          <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Additional Notes:</div>
-          <div style="color: #333;">${formData.additionalNotes || "Not specified"}</div>
-        </div>
-      </div>
-      <div style="border-top: 1px solid #ddd; padding-top: 20px; text-align: center; color: #666; font-size: 14px;">
-        <p style="margin: 5px 0;">This is an official second opinion request generated on ${new Date().toLocaleString()}</p>
-        <p style="margin: 5px 0;">For any queries, please contact the medical records department.</p>
-      </div>
-    </div>`;
+    element.innerHTML = generatePrintTemplate();
 
     const opt = {
       margin: 1,
@@ -383,8 +441,29 @@ const SecondOpinion = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrintOnly = () => {
+    const printContent = generatePrintTemplate();
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Second Opinion Request - ${generateRequestData().id}</title>
+          <style>
+            body { margin: 0; padding: 0; }
+            @media print {
+              body { print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   if (showMedicalRecords) {
@@ -402,16 +481,28 @@ const SecondOpinion = () => {
         <ArrowLeft size={20} />
         <span className="font-medium">Back to Medical Record Details</span>
       </button>
-      <div className="text-center mb-8">
+      <div className="text-left mb-8">
         <div className="inline-flex items-center gap-3">
-          <Stethoscope size={32} className="text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-800">Second Opinion Request</h1>
+          <Stethoscope size={32} className="primary-color" />
+          <h1 className="h3-heading">Second Opinion Request</h1>
         </div>
-        <p className="text-sm text-gray-600 mt-2">Get expert consultation for your medical condition</p>
+      </div>
+
+      <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckCircle size={24} className="text-green-600" />
+            <div>
+              <h3 className="font-semibold text-green-800">Medical Records Automatically Attached</h3>
+              <p className="text-sm text-green-700">Patient information, vitals, and medical history will be included</p>
+            </div>
+          </div>
+          <button onClick={() => setShowMedicalRecords(true)} className="view-btn">Preview Medical Records</button>
+        </div>
       </div>
       <div className="bg-gradient-to-r from-[#01B07A] to-[#1A223F] rounded-xl p-6 mb-8 text-white">
         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <User  size={20} />
+          <User size={20} />
           Patient Information (Auto-attached)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -518,30 +609,15 @@ const SecondOpinion = () => {
                 <div className="grid grid-cols-3 gap-3">
                   <button onClick={sendWhatsAppMessage} disabled={!formData.contactPhone || isSending.whatsapp} className={`flex flex-col items-center p-4 rounded-lg border transition-all ${formData.contactPhone && !isSending.whatsapp ? "border-green-300 hover:bg-green-50 hover:scale-105" : "border-gray-300 opacity-50 cursor-not-allowed"}`}>
                     {isSending.whatsapp ? <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div> : <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-8 h-8 mb-2" />}
-                    <span className="text-xs font-medium text-center">{isSending.whatsapp ? "Sending..." : "Send to WhatsApp"}</span>
+                    <span className="text-xs font-medium text-center">{isSending.whatsapp ? "Sending..." : "WhatsApp"}</span>
                   </button>
                   <button onClick={sendEmail} disabled={!formData.contactEmail || isSending.email} className={`flex flex-col items-center p-4 rounded-lg border transition-all ${formData.contactEmail && !isSending.email ? "border-red-300 hover:bg-red-50 hover:scale-105" : "border-gray-300 opacity-50 cursor-not-allowed"}`}>
-                    {isSending.email ? <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div> : <img src="https://img.icons8.com/color/48 /gmail--v1.png" alt="Email" className="w-7 h-7 mb-2" />}
-                    <span className="text-xs font-medium text-center">{isSending.email ? "Sending..." : "Send Email"}</span>
+                    {isSending.email ? <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div> : <img src="https://img.icons8.com/color/48/gmail--v1.png" alt="Email" className="w-7 h-7 mb-2" />}
+                    <span className="text-xs font-medium text-center">{isSending.email ? "Sending..." : "Email"}</span>
                   </button>
-                  <button onClick={async () => {
-                    try {
-                      const pdfBlob = await generatePDF();
-                      const url = URL.createObjectURL(pdfBlob);
-                      const link = document.createElement("a");
-                      link.href = url;
-                      link.download = `second-opinion-${generateRequestData().id}.pdf`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
-                      toast.success("PDF downloaded successfully!");
-                    } catch (error) {
-                      toast.error("Failed to generate PDF");
-                    }
-                  }} className="flex flex-col items-center p-4 rounded-lg border border-gray-300 hover:bg-gray-50 hover:scale-105 transition-all">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/print.png" alt="Download" className="w-6 h-6 mb-2" />
-                    <span className="text-xs font-medium text-center">Download PDF</span>
+                  <button onClick={handlePrintOnly} className="flex flex-col items-center p-4 rounded-lg border border-gray-300 hover:bg-gray-50 hover:scale-105 transition-all">
+                    <img src="https://img.icons8.com/ios-filled/50/000000/print.png" alt="Print" className="w-6 h-6 mb-2" />
+                    <span className="text-xs font-medium text-center">Print PDF</span>
                   </button>
                 </div>
                 {!formData.contactPhone && !formData.contactEmail && (

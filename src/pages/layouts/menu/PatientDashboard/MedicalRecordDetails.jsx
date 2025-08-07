@@ -2,23 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DynamicTable from "../../../../components/microcomponents/DynamicTable";
 import DocsReader from "../../../../components/DocsReader";
-import {
-  ArrowLeft,
-  FileText,
-  Pill,
-  TestTube,
-  CreditCard,
-  Activity,
-  Heart,
-  Thermometer,
-  CheckCircle,
-  AlertTriangle,
-  Printer,
-  Stethoscope,
-  Upload,
-  FileCheck,
-  X,
-} from "lucide-react";
+import { ArrowLeft, FileText, Pill, TestTube,CreditCard,Activity, Heart,Thermometer,CheckCircle, AlertTriangle, Printer, Stethoscope,Upload, FileCheck, X, Video,Receipt } from "lucide-react";
 
 const MedicalRecordDetails = () => {
   const navigate = useNavigate();
@@ -38,7 +22,8 @@ const MedicalRecordDetails = () => {
     labTestFiles: [],
     pharmacyBillingFiles: [],
     labBillingFiles: [],
-    hospitalBillingFiles: []
+    hospitalBillingFiles: [],
+    videoFiles: []
   });
 
   // Mock data for existing records
@@ -128,6 +113,28 @@ const MedicalRecordDetails = () => {
         },
       ],
     },
+    videoConsultationData: [
+      {
+        id: 1,
+        date: "05/07/2025",
+        time: "10:30 AM",
+        duration: "45 minutes",
+        doctorName: "Dr. Rajesh Kumar",
+        consultationType: "Follow-up",
+        recordingAvailable: true,
+        notes: "Patient discussed symptoms and treatment progress. Advised continued medication.",
+      },
+      {
+        id: 2,
+        date: "03/07/2025",
+        time: "02:15 PM",
+        duration: "30 minutes",
+        doctorName: "Dr. Priya Sharma",
+        consultationType: "Initial Consultation",
+        recordingAvailable: false,
+        notes: "Initial assessment completed. Prescribed medication and lifestyle changes.",
+      },
+    ],
   };
 
   const updateState = (updates) =>
@@ -262,6 +269,8 @@ const MedicalRecordDetails = () => {
         case "billing":
           const uploadInfo = getBillingUploadSection();
           return renderUploadSection(uploadInfo.key, uploadInfo.title);
+        case "video":
+          return renderUploadSection("videoFiles", "Upload Video Consultation Records");
         default:
           return null;
       }
@@ -274,7 +283,7 @@ const MedicalRecordDetails = () => {
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
               <FileText size={24} className="text-[var(--primary-color)]" />
-              <h3 className="h3-heading">Medical Information</h3>
+              <h3 className="h4-heading">Medical Information</h3>
             </div>
             <button className="view-btn">View Original</button>
           </div>
@@ -416,6 +425,11 @@ const MedicalRecordDetails = () => {
       ),
       billing: (
         <div className="space-y-6">
+           <div className="flex items-center gap-3 mb-6">
+  <Receipt size={24} className="text-orange-600" />
+  <h4 className="h4-heading">Billing History</h4>
+</div>
+
           <DynamicTable
             columns={(() => {
               const columnMaps = {
@@ -491,6 +505,53 @@ const MedicalRecordDetails = () => {
           />
         </div>
       ),
+      video: (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Video size={24} className="text-indigo-600" />
+            <h4 className="h4-heading">Video Consultation History</h4>
+          </div>
+          <DynamicTable
+            columns={[
+              { header: "Date", accessor: "date" },
+              { header: "Time", accessor: "time" },
+              { header: "Duration", accessor: "duration" },
+              { header: "Doctor Name", accessor: "doctorName" },
+              { header: "Consultation Type", accessor: "consultationType" },
+              {
+                header: "Recording",
+                accessor: "recordingAvailable",
+                cell: (row) => (
+                  <span
+                    className={`text-sm font-semibold px-2 py-1 rounded-full ${
+                      row.recordingAvailable
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {row.recordingAvailable ? "Available" : "Not Available"}
+                  </span>
+                ),
+              },
+              { header: "Notes", accessor: "notes" },
+              {
+                header: "Actions",
+                accessor: "actions",
+                cell: (row) => (
+                  <div className="flex gap-2">
+                    {row.recordingAvailable && (
+                      <button className="edit-btn flex items-center gap-1">
+                        <Video size={14} /> View Recording
+                      </button>
+                    )}
+                  </div>
+                ),
+              },
+            ]}
+            data={mockData.videoConsultationData}
+          />
+        </div>
+      ),
     };
 
     return tabContentMap[state.detailsActiveTab] || null;
@@ -515,12 +576,18 @@ const MedicalRecordDetails = () => {
     );
   }
 
-  const detailsTabs = [
+  // Base tabs that are always shown
+  const baseTabs = [
     { id: "medical-records", label: "Medical Records", icon: FileText },
     { id: "prescriptions", label: "Prescriptions", icon: Pill },
     { id: "lab-tests", label: "Lab/Scan", icon: TestTube },
     { id: "billing", label: "Billing", icon: CreditCard },
   ];
+
+  // Add Video tab only for Virtual records
+  const detailsTabs = selectedRecord?.type === "Virtual" 
+    ? [...baseTabs, { id: "video", label: "Video", icon: Video }]
+    : baseTabs;
 
   return (
     <div className="p-6 space-y-6">
@@ -587,7 +654,7 @@ const MedicalRecordDetails = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <Activity size={20} className="text-green-600" />
-              <h3 className="h3-heading">Vitals Summary</h3>
+              <h3 className="h4-heading">Vitals Summary</h3>
             </div>
           </div>
 
@@ -659,11 +726,11 @@ const MedicalRecordDetails = () => {
             </button>
           );
         })}
-        {selectedRecord?.type === "OPD" && !selectedRecord?.isNewlyAdded && (
+        {selectedRecord?.type && !selectedRecord?.isNewlyAdded && (
           <div className="flex-1 flex justify-end">
             <button
               onClick={handleSecondOpinion}
-              className="btn btn-primary text-white px-4 py-3 text-xs flex items-center gap-2  hover:opacity-90 transition-opacity"
+              className="btn btn-primary text-white px-4 py-3 text-xs flex items-center gap-2 hover:opacity-90 transition-opacity"
             >
               <Stethoscope size={18} />
               Get Second Opinion

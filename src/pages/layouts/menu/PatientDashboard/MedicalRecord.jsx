@@ -345,11 +345,48 @@ const MedicalRecords = () => {
     });
 
   const getFormFields = (recordType) => [
-    { name: "hospitalName", label: "Hospital Name", type: "text" },
+    { 
+      name: "hospitalName", 
+      label: "Hospital Name", 
+      type: "select", 
+      
+      options: [
+        { label: "AIIMS Delhi", value: "AIIMS Delhi" },
+        { label: "Fortis Hospital, Gurgaon", value: "Fortis Hospital, Gurgaon" },
+        { label: "Apollo Hospital, Chennai", value: "Apollo Hospital, Chennai" },
+        { label: "Medanta – The Medicity, Gurgaon", value: "Medanta – The Medicity, Gurgaon" },
+        { label: "Max Super Speciality Hospital, Delhi", value: "Max Super Speciality Hospital, Delhi" },
+        { label: "Narayana Health, Bangalore", value: "Narayana Health, Bangalore" },
+        { label: "Kokilaben Dhirubhai Ambani Hospital, Mumbai", value: "Kokilaben Dhirubhai Ambani Hospital, Mumbai" },
+        { label: "Lilavati Hospital, Mumbai", value: "Lilavati Hospital, Mumbai" },
+        { label: "Sir Ganga Ram Hospital, Delhi", value: "Sir Ganga Ram Hospital, Delhi" },
+        { label: "Christian Medical College, Vellore", value: "Christian Medical College, Vellore" },
+        { label: "Manipal Hospital, Bangalore", value: "Manipal Hospital, Bangalore" },
+        { label: "Jaslok Hospital, Mumbai", value: "Jaslok Hospital, Mumbai" },
+        { label: "BLK Super Speciality Hospital, Delhi", value: "BLK Super Speciality Hospital, Delhi" },
+        { label: "Care Hospitals, Hyderabad", value: "Care Hospitals, Hyderabad" },
+        { label: "Amrita Hospital, Kochi", value: "Amrita Hospital, Kochi" },
+        { label: "Ruby Hall Clinic, Pune", value: "Ruby Hall Clinic, Pune" },
+        { label: "Columbia Asia Hospital, Bangalore", value: "Columbia Asia Hospital, Bangalore" },
+        { label: "Hinduja Hospital, Mumbai", value: "Hinduja Hospital, Mumbai" },
+        { label: "D.Y. Patil Hospital, Navi Mumbai", value: "D.Y. Patil Hospital, Navi Mumbai" },
+        { label: "Tata Memorial Hospital, Mumbai", value: "Tata Memorial Hospital, Mumbai" },
+        { label: "Apollo Gleneagles Hospital, Kolkata", value: "Apollo Gleneagles Hospital, Kolkata" },
+        { label: "Wockhardt Hospitals, Mumbai", value: "Wockhardt Hospitals, Mumbai" },
+        { label: "SevenHills Hospital, Mumbai", value: "SevenHills Hospital, Mumbai" },
+        { label: "KIMS Hospital, Hyderabad", value: "KIMS Hospital, Hyderabad" },
+        { label: "Global Hospitals, Chennai", value: "Global Hospitals, Chennai" },
+        { label: "Yashoda Hospitals, Hyderabad", value: "Yashoda Hospitals, Hyderabad" },
+        { label: "Sunshine Hospital, Hyderabad", value: "Sunshine Hospital, Hyderabad" },
+        { label: "BM Birla Heart Research Centre, Kolkata", value: "BM Birla Heart Research Centre, Kolkata" },
+        { label: "Religare SRL Diagnostics, Mumbai", value: "Religare SRL Diagnostics, Mumbai" },
+        { label: "Sankara Nethralaya, Chennai", value: "Sankara Nethralaya, Chennai" },
+      ],
+    },
     { name: "chiefComplaint", label: "Chief Complaint", type: "text" },
     {
       name: "conditions",
-      label: "Medical Conditions",
+      label: "K/C/O",
       type: "multiselect",
       options: medicalConditions,
     },
@@ -403,7 +440,7 @@ const MedicalRecords = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Search size={24} className="text-[var(--primary-color)]" />
-          <h2 className="h2-heading">Medical Records History</h2>
+          <h2 className="h4-heading">Medical Records History</h2>
         </div>
         <button
           onClick={() => updateState({ showAddModal: true })}

@@ -1,23 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import axios from "axios";
@@ -512,7 +492,7 @@ const MultiStepForm = () => {
           isCurrentLocation: false
         });
         navigate("/patientdashboard/app");
-      }, 100);
+      }, 2000);
     } catch (error) {
       console.error("Booking failed:", error);
       alert("Booking failed. Please try again.");
@@ -1060,7 +1040,7 @@ const MultiStepForm = () => {
         </div>
       )}
 
-      {/* Compact Confirmation Modal */}
+      {/* Updated Confirmation Modal with Auto-Close */}
       {state.showConfirmationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl animate-slide-up">
@@ -1070,7 +1050,13 @@ const MultiStepForm = () => {
               </svg>
             </div>
             <h3 className="text-xl font-bold text-slate-800 mb-2">Booking Confirmed!</h3>
-            <p className="text-slate-600 text-sm">Your appointment has been successfully scheduled.</p>
+            <p className="text-slate-600 text-sm mb-4">Your appointment has been successfully scheduled.</p>
+            
+            {/* Auto-close indicator */}
+            <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-emerald-500"></div>
+            
+            </div>
           </div>
         </div>
       )}

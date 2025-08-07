@@ -2,12 +2,25 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Loader2, Edit } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import DynamicTable from "../../../../components/microcomponents/DynamicTable";
 import Pagination from "../../../../components/Pagination";
+import VirtualConsultationTab from "./VirtualConsultationTab";
 import { FiExternalLink } from "react-icons/fi";
 
 import "react-toastify/dist/ReactToastify.css";
@@ -40,7 +53,6 @@ const OPT = { OCC: ["Doctor", "Engineer", "Teacher", "Student", "Retired"], DEPT
 
 const API = { FORM: "https://681f2dfb72e59f922ef5774c.mockapi.io/addpatient", HD: "https://680cc0c92ea307e081d4edda.mockapi.io/personalHealthDetails", FD: "https://6808fb0f942707d722e09f1d.mockapi.io/FamilyData", HS: "https://6808fb0f942707d722e09f1d.mockapi.io/health-summary" };
 
-
 const getDate = () => new Date().toISOString().slice(0, 10);
 const getTime = () => new Date().toTimeString().slice(0, 5);
 const to24Hour = (t) => {
@@ -54,9 +66,7 @@ const to24Hour = (t) => {
 
 const FIELDS = [["firstName", "First Name*", "text", 1], ["middleName", "Middle Name", "text"], ["lastName", "Last Name*", "text", 1], ["phone", "Phone Number*", "text", 1], ["email", "Email Address*", "text", 1], ["gender", "Gender*", "select", 1, OPT.GENDER], ["dob", "Date of Birth*", "date", 1], ["bloodGroup", "Blood Group", "select", 0, OPT.BLOOD], ["addressPerm", "Permanent Address*", "textarea", 1], ["addressTemp", "Temporary Address*", "textarea", 1], ["password", "Create Password*", "password", 1], ["confirmPassword", "Confirm Password*", "password", 1], ["occupation", "Occupation*", "suggest", 1, OPT.OCC]];
 
-
 const IPD = [["admissionDate", "Admission Date*", "date", 1], ["admissionTime", "Admission Time*", "time", 1], ["status", "Status*", "select", 1, OPT.STATUS], ["wardType", "Ward Type*", "select", 1, OPT.RATE], ["department", "Department*", "select", 1, OPT.DEPT], ["insuranceType", "Insurance Type*", "select", 1, OPT.INS], ["doctorInCharge", "Doctor In Charge", "text"], ["doctorSpecialization", "Doctor Specialization", "text"], ["treatmentPlan", "Treatment Plan", "text"], ["surgeryRequired", "Surgery Required", "select", 0, OPT.SURGERY], ["dischargeDate", "Discharge Date", "date"], ["diagnosis", "Diagnosis", "text"], ["reasonForAdmission", "Reason For Admission", "text"]];
-
 
 const defaultForm = Object.fromEntries(FIELDS.map((f) => [f[0], ""]));
 const defaultIPD = Object.fromEntries(
@@ -349,7 +359,7 @@ navigate("/doctordashboard/medical-record", {
             className="text-blue-600 hover:text-blue-800"
             style={{ display: 'flex', alignItems: 'center' }}
           >
-            <FaNotesMedical />
+        <FiExternalLink/>
           </button>
         </div>
       )
@@ -359,7 +369,8 @@ navigate("/doctordashboard/medical-record", {
   // Define tabs
   const tabs = [
     { label: "OPD", value: "OPD" },
-    { label: "IPD", value: "IPD" }
+    { label: "IPD", value: "IPD" },
+    { label: "Virtual", value: "Virtual" }
   ];
 
   // Define tab actions
@@ -372,7 +383,7 @@ navigate("/doctordashboard/medical-record", {
           className: "btn btn-primary whitespace-nowrap px-4 py-2 text-xs flex items-center gap-2"
         }
       ];
-    } else {
+    } else if (activeTab === "IPD") {
       return [
         {
           label: "Add Patient",
@@ -381,6 +392,7 @@ navigate("/doctordashboard/medical-record", {
         }
       ];
     }
+    return [];
   };
 
   // Define filters for IPD
@@ -405,13 +417,14 @@ navigate("/doctordashboard/medical-record", {
           .toLowerCase()
           .includes((searchTerm || "").toLowerCase())
       );
-    } else {
+    } else if (activeTab === "IPD") {
       const ipdPageSize = 6;
       const ipdPage = 1; // You might want to add IPD pagination state
       return ipdState.filteredIPD
         .filter((p) => (p.type || "").toLowerCase() === "ipd")
         .slice((ipdPage - 1) * ipdPageSize, ipdPage * ipdPageSize);
     }
+    return [];
   };
 
   // Handle cell clicks
@@ -419,7 +432,7 @@ navigate("/doctordashboard/medical-record", {
     if (column.accessor === "name") {
       if (activeTab === "OPD") {
         viewPatientDetails(row);
-      } else {
+      } else if (activeTab === "IPD") {
         viewIpdPatientDetails(row);
       }
     }
@@ -1215,7 +1228,6 @@ navigate("/doctordashboard/medical-record", {
 
  const viewPatientDetails = async (a) => { setSelectedPatient(a); setPersonalDetails(null); setFamily([]); setVitals(null); setLoadingDetails(true); try { const { data: personalData } = await axios.get("https://680cc0c92ea307e081d4edda.mockapi.io/personalHealthDetails"); const p = personalData.find((p) => (p.email || "").trim().toLowerCase() === (a.email || "").trim().toLowerCase()); if (p) setPersonalDetails({ height: p.height, weight: p.weight, bloodGroup: p.bloodGroup, surgeries: p.surgeries, allergies: p.allergies, isSmoker: p.isSmoker, isAlcoholic: p.isAlcoholic }); try { const { data: familyData } = await axios.get("https://6808fb0f942707d722e09f1d.mockapi.io/FamilyData"); setFamily(familyData.filter((f) => (f.email || "").trim().toLowerCase() === (a.email || "").trim().toLowerCase())); } catch { setFamily([]); } try { const { data: vitalsData } = await axios.get("https://6808fb0f942707d722e09f1d.mockapi.io/health-summary"); const v = vitalsData.find((v) => (v.email || "").trim().toLowerCase() === (a.email || "").trim().toLowerCase()); setVitals(v ? { bloodPressure: v.bloodPressure || "Not recorded", heartRate: v.heartRate || "Not recorded", temperature: v.temperature || "Not recorded", bloodSugar: v.bloodSugar || "Not recorded" } : null); } catch { setVitals(null); } } catch {} setLoadingDetails(false); };
 
-
   if (showForm) return <div>Form Page Component</div>;
 
   // --- Render ---
@@ -1235,43 +1247,72 @@ navigate("/doctordashboard/medical-record", {
         <h2 className="text-xl font-semibold">Patients</h2>
       </div>
 
-      {/* Dynamic Table Component */}
-      <DynamicTable
-        columns={activeTab === "OPD" ? opdColumns : ipdColumns}
-        data={getTableData()}
-        onCellClick={handleCellClick}
-        filters={activeTab === "IPD" ? ipdFilters : []}
-        tabs={tabs}
-        tabActions={getTabActions()}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
+      {/* Render Virtual Tab or Dynamic Table */}
+      {activeTab === "Virtual" ? (
+        <div>
+          {/* Tab Navigation */}
+          <div className="flex mb-4">
+            {tabs.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => handleTabChange(tab.value)}
+                className={`px-4 py-2 font-medium  border-b-2 transition-colors ${
+                  activeTab === tab.value
+                    ? ""
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+            {/* No Add Patient button for Virtual tab */}
+          </div>
 
-      {/* Pagination */}
-      <div className="w-full flex justify-end mt-4">
-        <Pagination
-          page={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
+          {/* Virtual Consultation Tab Content */}
+          <VirtualConsultationTab
+            onViewPatientDetails={viewPatientDetails}
+            onAddRecord={handleAddRecord}
+            searchTerm={searchTerm}
+          />
+        </div>
+      ) : (
+        /* Dynamic Table Component for OPD and IPD */
+        <DynamicTable
+          columns={activeTab === "OPD" ? opdColumns : ipdColumns}
+          data={getTableData()}
+          onCellClick={handleCellClick}
+          filters={activeTab === "IPD" ? ipdFilters : []}
+          tabs={tabs}
+          tabActions={getTabActions()}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
         />
-      </div>
+      )}
+
+      {/* Pagination - Only show for OPD and IPD */}
+      {activeTab !== "Virtual" && (
+        <div className="w-full flex justify-end mt-4">
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
 
       {/* All your existing modals remain the same... */}
     {appointmentModal && !selectedSearchPatient && (<div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50"><div className="bg-white p-6 max-w-lg w-full rounded shadow space-y-4"><div className="flex justify-between items-center"><h3 className="text-lg font-semibold">Schedule OPD Appointment</h3><button onClick={handleCloseAppointmentModal} className="text-gray-500 hover:text-red-600 text-xl">&times;</button></div><div className="font-semibold">Book an appointment for <span className="text-blue-700">{formData.firstName || "Patient"}</span></div><form className="space-y-4" onSubmit={(e) => {e.preventDefault();handleScheduleAppointment();}}><div className="grid md:grid-cols-2 gap-4"><input type="date" className="input-field" value={appointment.date} onChange={(e) => setAppointment({...appointment, date: e.target.value})} /><input type="time" className="input-field" value={appointment.time} onChange={(e) => setAppointment({...appointment, time: e.target.value})} /></div>{appointmentErrors.date && (<span className="text-red-500 text-xs">{appointmentErrors.date}</span>)}{appointmentErrors.time && (<span className="text-red-500 text-xs">{appointmentErrors.time}</span>)}<input type="text" className="input-field" placeholder="Enter Diagnosis" value={appointment.diagnosis} onChange={(e) => setAppointment({...appointment, diagnosis: e.target.value})} required />{appointmentErrors.diagnosis && (<span className="text-red-500 text-xs">{appointmentErrors.diagnosis}</span>)}<select className="input-field" value={appointment.reason} onChange={(e) => setAppointment({...appointment, reason: e.target.value})}><option value="">Select Reason for Visit</option><option>Consultation</option><option>Follow-up</option><option>Test</option><option>Other</option></select>{appointmentErrors.reason && (<span className="text-red-500 text-xs">{appointmentErrors.reason}</span>)}<div className="flex justify-end gap-3 pt-2"><button type="button" className="px-6 py-2 rounded-full border border-gray-400 transition-colors duration-200 hover:bg-[var(--color-overlay)] hover:text-white hover:border-[var(--color-overlay)]" onClick={handleCloseAppointmentModal}>Cancel</button><button type="submit" className="border-2 border-[var(--accent-color)] bg-transparent text-[var(--accent-color)] px-6 py-2 rounded-full shadow transition-colors duration-300 hover:bg-[var(--accent-color)] hover:text-white disabled:opacity-60" disabled={!appointment.diagnosis || !appointment.reason}>Schedule Appointment</button></div></form></div></div>)}
 
       {/* OPD Add Patient Modal */}
      {modalOpen&&!appointmentModal&&(<div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50"><div className="bg-white p-4 max-w-2xl w-full rounded shadow overflow-y-auto max-h-[90vh]"><div className="flex justify-between items-center mb-2"><h3 className="text-lg font-semibold">Add New Patient</h3><button onClick={()=>setModalOpen(false)} className="text-gray-500 hover:text-red-600 text-xl">&times;</button></div><form className="space-y-2" onSubmit={(e)=>{e.preventDefault();handleCreateAppointment(formData,aadhaarId,occ);}}><div className="grid md:grid-cols-3 gap-2 mb-7">{["firstName","middleName","lastName"].map((field,i)=>(<div key={i} className="floating-input relative mb-3" data-placeholder={`${field.replace(/([A-Z])/g," $1").replace(/^./,(s)=>s.toUpperCase())}${field!=="middleName"?"*":""}`}><input className={`input-field peer w-full ${formErrors[field]?"border-red-500":""}`} value={formData[field]} onChange={(e)=>{setFormData({...formData,[field]:e.target.value});setFormTouched((t)=>({...t,[field]:true}));validateForm();}} placeholder=" " autoComplete="off"/><span className="text-red-500 text-xs absolute left-0 -bottom-8">{formTouched[field]&&formErrors[field]?formErrors[field]:""}</span></div>))}</div><div className="grid md:grid-cols-3 gap-2"><div className="floating-input relative mb-6" data-placeholder="Phone Number*"><input className={`input-field peer w-full ${formErrors.phone?"border-red-500":""}`} value={formData.phone} onChange={(e)=>{const val=e.target.value.replace(/\D/g,"");setFormData({...formData,phone:val});setFormTouched((t)=>({...t,phone:true}));validateForm();}} maxLength={10} placeholder=" " autoComplete="off"/><span className="text-red-500 text-xs absolute left-0 -bottom-5">{formTouched.phone&&formErrors.phone?formErrors.phone:""}</span></div><div className="floating-input relative mb-1" data-placeholder="Email Address*"><input className={`input-field peer w-full ${formErrors.email?"border-red-500":""}`} value={formData.email} onChange={(e)=>{setFormData({...formData,email:e.target.value});setFormTouched((t)=>({...t,email:true}));validateForm();}} placeholder=" " autoComplete="off"/><span className="text-red-500 text-xs absolute left-0 -bottom-1">{formTouched.email&&formErrors.email?formErrors.email:""}</span></div><div className="floating-input relative mb-8" data-placeholder="Aadhaar Number*"><input className={`input-field peer w-full ${formErrors.aadhaarId?"border-red-500":""}`} value={aadhaarId} maxLength={12} onChange={(e)=>{const val=e.target.value.replace(/\D/g,"");setAadhaarId(val);setFormTouched((t)=>({...t,aadhaarId:true}));validateForm();}} placeholder=" " autoComplete="off"/><span className="text-red-500 text-xs absolute left-0 -bottom-5">{formTouched.aadhaarId&&formErrors.aadhaarId?formErrors.aadhaarId:""}</span></div></div><div className="grid md:grid-cols-3 gap-2 mb-1"><div className="floating-input relative mb-1"><select className={`input-field w-full ${formErrors.gender?"border-red-500":""}`} value={formData.gender} onChange={(e)=>{setFormData({...formData,gender:e.target.value});setFormTouched((t)=>({...t,gender:true}));validateForm();}}><option>Select Gender</option><option>Female</option><option>Male</option><option>Other</option></select><span className="text-red-500 text-xs absolute left-0 -bottom-1">{formTouched.gender&&formErrors.gender?formErrors.gender:""}</span></div><div className="floating-input relative mb-6" data-placeholder="Date of Birth*"><input type="date" className={`input-field peer w-full ${formErrors.dob?"border-red-500":""}`} value={formData.dob} onChange={(e)=>{setFormData({...formData,dob:e.target.value});setFormTouched((t)=>({...t,dob:true}));validateForm();}} placeholder=" " autoComplete="off"/><span className="text-red-500 text-xs absolute left-0 -bottom-6">{formTouched.dob&&formErrors.dob?formErrors.dob:""}</span></div><div className="floating-input relative mb-1" data-placeholder="Occupation"><SuggestInput val={occ} setVal={setOcc} list={occList} setList={setOccList} data={occOpt} placeholder="Occupation"/></div></div><div className="grid md:grid-cols-3 gap-2"><div className="floating-input relative mb-3" data-placeholder="Permanent Address*"><textarea placeholder=" " className={`input-field peer w-full ${formErrors.addressPerm?"border-red-500":""}`} value={formData.addressPerm} onChange={(e)=>{setFormData({...formData,addressPerm:e.target.value});setFormTouched((t)=>({...t,addressPerm:true}));validateForm();}} autoComplete="off" rows={1}/><span className="text-red-500 text-xs absolute left-0 -bottom-4">{formTouched.addressPerm&&formErrors.addressPerm?formErrors.addressPerm:""}</span></div><div className="floating-input relative mb-1" data-placeholder="Temporary Address*"><textarea placeholder=" " className={`input-field peer w-full ${formErrors.addressTemp?"border-red-500":""}`} value={formData.addressTemp} onChange={(e)=>{setFormData({...formData,addressTemp:e.target.value});setFormTouched((t)=>({...t,addressTemp:true}));validateForm();}} autoComplete="off" rows={1}/><span className="text-red-500 text-xs absolute left-0 -bottom-4">{formTouched.addressTemp&&formErrors.addressTemp?formErrors.addressTemp:""}</span></div><div className="relative floating-input mb-1" data-placeholder="Upload Photo"><input type="file" accept="image/*" className="input-field peer w-full mb-5"/></div></div><div className="grid md:grid-cols-2 gap-2"><div className="floating-input relative mb-1" data-placeholder="Create Password"><input type={showPassword?"text":"password"} placeholder=" " className={`input-field peer pr-10 w-full mb-5 ${formErrors.password?"border-red-500":""}`} autoComplete="off" value={formData.password} onChange={(e)=>{setFormData({...formData,password:e.target.value});setFormTouched((t)=>({...t,password:true}));validateForm();}}/><button type="button" tabIndex={-1} className="absolute right-3 top-1/3 -translate-y-1/2 text-gray-400 hover:text-gray-700" onClick={()=>setShowPassword((v)=>!v)}>{showPassword?<FaEyeSlash/>:<FaEye/>}</button><span className="text-red-500 text-xs absolute left-0 -bottom-8 block min-h-[1rem]">{formTouched.password&&formErrors.password?formErrors.password:""}</span></div><div className="floating-input relative mb-1" data-placeholder="Confirm Password"><input type={showConfirm?"text":"password"} placeholder=" " className={`input-field peer pr-10 w-full mb-3 ${formErrors.confirmPassword?"border-red-500":""}`} autoComplete="off" value={formData.confirmPassword} onChange={(e)=>{setFormData({...formData,confirmPassword:e.target.value});setFormTouched((t)=>({...t,confirmPassword:true}));validateForm();}}/><button type="button" tabIndex={-1} className="absolute right-3 top-1/3 -translate-y-1/2 text-gray-400 hover:text-gray-700" onClick={()=>setShowConfirm((v)=>!v)}>{showConfirm?<FaEyeSlash/>:<FaEye/>}</button><span className="text-red-500 text-xs absolute left-0 -bottom-2 block min-h-[1rem]">{formTouched.confirmPassword&&formErrors.confirmPassword?formErrors.confirmPassword:""}</span></div></div><div className="flex justify-end pt-2"><button type="submit" className="bg-green-600 text-white px-6 py-2 rounded shadow hover:bg-green-700"> ADD Patient </button></div></form></div></div>)}
-
       {/* IPD Modal for Add Patient */}
       {ipdState.modalOpen&&!ipdState.showIpdForm&&<div className="fixed inset-0 flex items-center justify-center z-50 bg-[rgba(14,22,48,0.18)] backdrop-blur-sm"><div className="bg-white rounded-3xl shadow-2xl border-2 border-[var(--accent-color)] p-8 w-full max-w-2xl animate-slideUp"><div className="flex justify-between items-center mb-4"><h3 className="text-lg font-semibold">Add New Patient</h3><button onClick={()=>S("modalOpen",false)} className="text-gray-500 hover:text-red-600 text-xl">&times;</button></div><form className="space-y-6" onSubmit={handlePatientFormSubmit}><div className="flex flex-col md:flex-row gap-4"><div className="floating-input relative flex-1" data-placeholder="Enter PatientId Number"><input className={`input-field peer ${ipdErrors.aadhaarId?"border-red-500":""}`} value={ipdState.aadhaarId} maxLength={12} onChange={(e)=>S("aadhaarId",e.target.value.replace(/\D/g,""))} placeholder=" " autoComplete="off"/>{ipdErrors.aadhaarId&&<span className="text-red-500 text-xs">{ipdErrors.aadhaarId}</span>}</div><button type="button" onClick={fetchPatient} className="animate-pulse-save text-white px-4 text-sm py-2 rounded self-end md:self-auto" style={{backgroundColor:"var(--primary-color)"}}>Get Patient Details</button></div><div className="grid md:grid-cols-3 gap-x-4 gap-y-4">{renderFields(FIELDS.slice(0,2),ipdState.formData,F,ipdErrors,ipdState.occList,v=>S("occList",v))}{renderFields(FIELDS.slice(2,3),ipdState.formData,F,ipdErrors,ipdState.occList,v=>S("occList",v))}</div><div className="grid md:grid-cols-3 gap-x-4 gap-y-4">{renderFields(FIELDS.slice(3,6),ipdState.formData,F,ipdErrors,ipdState.occList,v=>S("occList",v))}</div><div className="grid md:grid-cols-3 gap-x-4 gap-y-4">{renderFields(FIELDS.slice(6,7),ipdState.formData,F,ipdErrors,ipdState.occList,v=>S("occList",v))}{renderFields(FIELDS.slice(7,8),ipdState.formData,F,ipdErrors,ipdState.occList,v=>S("occList",v))}{renderFields(FIELDS.slice(12,13),ipdState.formData,F,ipdErrors,ipdState.occList,v=>S("occList",v))}</div><div className="grid md:grid-cols-2 gap-x-4 gap-y-4">{renderFields(FIELDS.slice(8,10),ipdState.formData,F,ipdErrors,ipdState.occList,v=>S("occList",v))}</div><div className="grid md:grid-cols-2 gap-x-4 gap-y-4">{renderFields(FIELDS.slice(10,12),ipdState.formData,F,ipdErrors,ipdState.occList,v=>S("occList",v))}</div><div><label className="font-medium block mb-1">Upload Photo</label><input type="file" accept="image/*" className="input-field w-full"/></div><div className="flex flex-col md:flex-row justify-end gap-4 pt-2"><button type="submit" className="btn btn-primary animate-pulse-save px-6 py-2 shadow-md hover:scale-105 transition-all duration-300">Next</button></div></form></div></div>}
 
       {/* Modal for IPD Details */}
      {ipdState.modalOpen && ipdState.showIpdForm && (<div className="fixed inset-0 flex items-center justify-center z-50 bg-[rgba(14,22,48,0.18)] backdrop-blur-sm"><div className="bg-white rounded-3xl shadow-2xl border-2 border-[var(--primary-color)] p-8 w-full max-w-xl animate-slideUp"><div className="flex justify-between items-center mb-4"><h3 className="text-lg font-semibold">IPD Details</h3><button onClick={handleCloseIpdModal} className="text-gray-500 hover:text-red-600 text-xl">&times;</button></div><form className="space-y-6" onSubmit={handleIPDFormSubmit}><div className="space-y-3"><div className="grid md:grid-cols-3 gap-x-4 gap-y-4">{renderFields(IPD, ipdState.ipdData, I, ipdErrors)}</div></div><div className="flex flex-col md:flex-row justify-end gap-4 pt-2"><button type="button" className="bg-gray-400 text-white px-6 py-2 rounded shadow hover:bg-gray-500 animated-cancel-btn" onClick={handleCloseIpdModal}>{ipdState.editModalOpen ? "Cancel" : "Back"}</button><button type="submit" disabled={ipdState.saving} className="btn btn-primary animate-pulse-save flex items-center gap-2 disabled:opacity-50 px-6 py-2 shadow-md hover:scale-105 transition-all duration-300">{ipdState.saving && (<Loader2 className="w-4 h-4 animate-spin" />)}{ipdState.editModalOpen ? "Save" : "Add Patient to IPD"}</button></div></form></div></div>)}
 
-
       {/* Ward Selection Modal */}
      {wardModal&&<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"><div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"><div className="flex justify-between items-center mb-4"><h3 className="text-lg font-semibold">Select Ward Details</h3><button onClick={handleWardModalClose} className="text-gray-500 hover:text-red-600 text-xl">&times;</button></div><div className="space-y-4"><div><label className="block text-sm font-medium mb-2"></label><select className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" value={wardSelection.wardType} onChange={(e)=>setWardSelection({...wardSelection,wardType:e.target.value})}><option value="">Select Ward Type</option>{WARD_TYPES.map((type)=><option key={type} value={type}>{type}</option>)}</select></div><div><label className="block text-sm font-medium mb-2">Ward Number</label><select className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" value={wardSelection.wardNumber} onChange={(e)=>setWardSelection({...wardSelection,wardNumber:e.target.value})}><option value="">Select Ward Number</option>{WARD_NUMBERS.map((num)=><option key={num} value={num}>{num}</option>)}</select></div><div><label className="block text-sm font-medium mb-2">Bed Number</label><select className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" value={wardSelection.bedNumber} onChange={(e)=>setWardSelection({...wardSelection,bedNumber:e.target.value})}><option value="">Select Bed Number</option>{BED_NUMBERS.map((bed)=><option key={bed} value={bed}>{bed}</option>)}</select></div></div><div className="flex justify-end gap-3 mt-6"><button onClick={handleWardModalClose} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button><button onClick={handleWardSelectionConfirm} disabled={!wardSelection.wardType||!wardSelection.wardNumber||!wardSelection.bedNumber} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Confirm</button></div></div></div>}
-
 
       {/* Patient Details Modal for OPD */}
       {selectedPatient&&<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"><div className="bg-white p-6 rounded-2xl w-full max-w-3xl relative overflow-y-auto max-h-[90vh] animate-fadeIn"><button onClick={()=>setSelectedPatient(null)} className="absolute top-3 right-4 text-2xl text-gray-400 hover:text-red-500 transition-colors">&times;</button><h4 className="text-2xl font-bold text-[#0E1630] mb-4">Patient Details</h4><div className="border p-4 rounded-md shadow-sm hover:shadow-md transition-shadow mb-5"><h4 className="font-bold mb-3 border-b pb-2">Basic Information</h4><h4 className="font-semibold">{selectedPatient.name}</h4><p className="font-semibold">Appointment: {selectedPatient.datetime}</p><p className="font-semibold">Reason:{selectedPatient.reason}</p><p className="font-semibold">Email: {selectedPatient.email||"—"}</p></div><div className="space-y-6"><div className="border p-4 rounded-md shadow-sm hover:shadow-md transition-shadow"><h4 className="font-bold mb-3 border-b pb-2">Personal Health Details</h4>{loadingDetails?<div>Loading...</div>:personalDetails?<div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><span className="text-sm text-gray-500">Height</span><p className="text-lg font-semibold">{personalDetails.height||"—"} cm</p></div><div><span className="text-sm text-gray-500">Weight</span><p className="text-lg font-semibold">{personalDetails.weight||"—"} kg</p></div><div><span className="text-sm text-gray-500">Blood Group</span><p className="text-lg font-semibold">{personalDetails.bloodGroup||"Not recorded"}</p></div></div>:<div className="text-center py-4 text-gray-500">No personal health details found.</div>}</div><div className="border p-4 rounded-md shadow-sm hover:shadow-md transition-shadow"><h4 className="font-bold mb-3 border-b pb-2">Family History</h4>{loadingDetails?<div>Loading...</div>:family&&family.length>0?<div className="space-y-3">{family.map((m,i)=><div key={i} className="p-3 border rounded-md"><div className="grid grid-cols-1 md:grid-cols-2 gap-3"><div><span className="font-semibold">Name</span><p>{m.name||"—"}</p></div><div><span className="font-semibold">Relation</span><p>{m.relation||"—"}</p></div><div><span className="font-semibold">Number</span><p>{m.number||"—"}</p></div><div><span className="font-semibold">Diseases</span><p>{m.diseases&&m.diseases.length?m.diseases.join(", "):"No diseases recorded"}</p></div></div></div>)}</div>:<div className="text-center py-4 text-gray-500">No family history recorded for this patient.</div>}</div><div className="border p-4 rounded-md shadow-sm hover:shadow-md transition-shadow"><h4 className="font-bold mb-3 border-b pb-2">Vital Signs</h4>{loadingDetails?<div>Loading...</div>:vitals?<div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><span className="text-sm text-gray-500">Blood Pressure</span><p className="text-lg font-semibold">{vitals.bloodPressure}</p></div><div><span className="text-sm text-gray-500">Heart Rate</span><p className="text-lg font-semibold">{vitals.heartRate}</p></div><div><span className="text-sm text-gray-500">Temperature</span><p className="text-lg font-semibold">{vitals.temperature}</p></div><div><span className="text-sm text-gray-500">Blood Sugar</span><p className="text-lg font-semibold">{vitals.bloodSugar}</p></div></div>:<div className="text-center py-4 text-gray-500">No vital signs recorded</div>}</div></div></div></div>}

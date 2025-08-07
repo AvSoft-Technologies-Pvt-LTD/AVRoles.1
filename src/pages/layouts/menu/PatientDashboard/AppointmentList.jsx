@@ -126,7 +126,7 @@ const AppointmentList = () => {
   const currentLabAppointments = s.l.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   return (
-    <div className="pt-6 bg-white p-6 rounded-2xl shadow-lg">
+    <div className="pt-6 bg-white p-6 rounded-2xl ">
       <DynamicTable
         columns={s.t === "doctor" ? doctorColumns : labColumns}
         data={s.t === "doctor" ? currentDoctorAppointments : currentLabAppointments}

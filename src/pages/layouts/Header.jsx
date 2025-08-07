@@ -170,12 +170,13 @@ const HeaderWithNotifications = () => {
                 className="group p-3 rounded-full bg-[var(--accent-color)]  hover:bg-[var(--primary-color)] transition-all duration-300 transform hover:scale-110 hover:shadow-md" >
                 <Pill className="h-5 w-5 text-white transition-all duration-300 group-hover:rotate-12" />
               </button>
-              <button
-                onClick={() => navigate('/patientdashboard/ambulance')}
-                title="Ambulance"
-                className="group px-3 py-2 rounded-full  transition-all duration-300 transform hover:scale-110 bg-red-500"              >
-                <FaAmbulance className="h-6 w-6 text-white shine-blink" />
-              </button>
+            <button
+      onClick={() => navigate('/patientdashboard/ambulance')}
+      title="Ambulance"
+      className="group px-3 py-2 rounded-full  transition-all duration-300 transform hover:scale-110 bg-red-500"
+    >
+      <FaAmbulance className="h-6 w-6 text-white shine-blink" />
+    </button>
             </div>
           ) : (
             <div className="flex items-center gap-4 text-[#021630]">

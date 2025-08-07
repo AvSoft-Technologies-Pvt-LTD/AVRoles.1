@@ -1,6 +1,3 @@
-
-
-
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -17,6 +14,12 @@ const DoctorList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
   
   // Get user from localStorage with error handling
   const getUserFromStorage = () => {
@@ -68,7 +71,8 @@ const DoctorList = () => {
       setShowConfirmationModal(true); 
       setTimeout(() => { 
         setShowConfirmationModal(false); 
-      }, 2500); 
+        navigate('/patientdashboard/app'); 
+      }, 500); 
     } catch (error) { 
       console.error("Booking failed:", error); 
       alert("Booking failed. Please try again."); 
@@ -267,6 +271,7 @@ const DoctorList = () => {
                   type="date" 
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)} 
+                  min={getTodayDate()}
                   className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200" 
                   onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px #01D48C33'} 
                   onBlur={(e) => e.target.style.boxShadow = 'none'}

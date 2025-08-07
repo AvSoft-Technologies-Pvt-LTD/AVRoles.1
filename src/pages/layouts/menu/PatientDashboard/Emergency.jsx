@@ -28,6 +28,7 @@ const Emergency = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [showPaymentGateway, setShowPaymentGateway] = useState(false);
   const [bookingData, setBookingData] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false); // Track if user has searched
 
   const equipRef = useRef(null);
   const searchRef = useRef(null);
@@ -74,6 +75,13 @@ const Emergency = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showEquip, showSuggestions]);
+
+  // Auto-trigger search when filter changes (only if user has already searched)
+  useEffect(() => {
+    if (hasSearched && searchQuery) {
+      searchAmbulances(searchQuery);
+    }
+  }, [selectedFilter]);
 
   const getIcon = (name, size = 20) => {
     const icons = {
@@ -136,6 +144,8 @@ const Emergency = () => {
       return;
     }
     setSearchLoading(true);
+    setHasSearched(true); // Mark that user has performed a search
+
     setTimeout(() => {
       let results = [...data.ambulanceServices].filter((ambulance) =>
         [
@@ -146,18 +156,45 @@ const Emergency = () => {
           ambulance.phone,
         ].some((field) => field.toLowerCase().includes(query.toLowerCase()))
       );
-      if (selectedFilter !== "all") {
-        results = results.filter(
-          (amb) =>
-            (amb.available && selectedFilter === "available") ||
-            amb.category.toLowerCase() === selectedFilter
-        );
+
+      // Combined filter logic
+      let filters = selectedFilter
+        .split(",")
+        .map((f) => f.trim())
+        .filter((f) => f && f !== "all");
+
+      if (filters.length > 0) {
+        results = results.filter((amb) => {
+          let match = true;
+          filters.forEach((filter) => {
+            if (filter === "available") {
+              if (!amb.available) match = false;
+            } else if (
+              ["government", "private", "hospital", "ngo"].includes(filter)
+            ) {
+              if (amb.category.toLowerCase() !== filter) match = false;
+            } else if (["bls", "als", "icu"].includes(filter)) {
+              if (!amb.type.toLowerCase().includes(filter)) match = false;
+            }
+          });
+          return match;
+        });
       }
+
       setFilteredAmbulances(
         results.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
       );
       setSearchLoading(false);
     }, 500);
+  };
+
+  // Handle filter change
+  const handleFilterChange = (filterValue) => {
+    setSelectedFilter(filterValue);
+    // If user has already searched, automatically apply the new filter
+    if (hasSearched && searchQuery) {
+      // Don't call searchAmbulances here as it will be called by useEffect
+    }
   };
 
   const getAmbulanceTypeIcon = (type) => {
@@ -201,7 +238,10 @@ const Emergency = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-500">
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: "var(--accent-color)" }}
+              >
                 <Lucide.MapPin className="text-white" size={24} />
               </div>
               <div>
@@ -215,7 +255,7 @@ const Emergency = () => {
             </div>
             <button
               onClick={() => setShowNearbyView(false)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="btn btn-secondary"
             >
               <Lucide.X size={20} />
             </button>
@@ -277,13 +317,13 @@ const Emergency = () => {
               </div>
               <button
                 onClick={searchByCurrentLocation}
-                className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
+                className="btn view-btn"
               >
                 <Lucide.MapPin size={20} /> Current Location
               </button>
               <select
                 value={selectedFilter}
-                onChange={(e) => setSelectedFilter(e.target.value)}
+                onChange={(e) => handleFilterChange(e.target.value)}
                 className="px-4 py-3 border border-gray-300 rounded-lg outline-none transition-colors focus:border-blue-500"
               >
                 <option value="all">All Filters</option>
@@ -298,7 +338,9 @@ const Emergency = () => {
               <button
                 onClick={searchAmbulances}
                 disabled={searchLoading}
-                className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-2 font-medium"
+                className={`btn view-btn${
+                  searchLoading ? " btn-disabled" : ""
+                }`}
               >
                 {searchLoading ? (
                   <Lucide.Loader2 className="animate-spin" size={20} />
@@ -312,9 +354,11 @@ const Emergency = () => {
         </div>
         {filteredAmbulances.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-800">
-              Found {filteredAmbulances.length} Ambulances
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-800">
+                Found {filteredAmbulances.length} Ambulances
+              </h2>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAmbulances.map((ambulance) => (
                 <div
@@ -376,7 +420,7 @@ const Emergency = () => {
                         onClick={() =>
                           window.open(`tel:${ambulance.phone}`, "_self")
                         }
-                        className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                        className="btn view-btn flex-1 text-sm"
                       >
                         <Lucide.Phone size={16} /> Call Now
                       </button>
@@ -386,7 +430,7 @@ const Emergency = () => {
                             `Booking request sent to ${ambulance.serviceName}`
                           )
                         }
-                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                        className="btn btn-secondary flex-1 text-sm"
                       >
                         <Lucide.Calendar size={16} /> Book
                       </button>
@@ -413,8 +457,9 @@ const Emergency = () => {
               size={32}
             />
             <p className="text-gray-600">
-              No ambulances found for "{searchQuery}". Try different search
-              terms.
+              No ambulances found for "{searchQuery}"
+              {selectedFilter !== "all" && ` with filter "${selectedFilter}"`}.
+              Try different search terms or remove filters.
             </p>
           </div>
         )}
@@ -638,16 +683,19 @@ const Emergency = () => {
     }
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+        <div className="bg-gradient-to-r from-[#01B07A] to-[#1A223F] rounded-xl p-6 mb-6 text-white">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "var(--surfaceColor)" }}
+            >
               <Lucide.CheckCircle className="text-white" size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-blue-900">
+              <h3 style={{ color: "var(--surfaceColor)", fontWeight: 700 }}>
                 Booking Confirmation
               </h3>
-              <p className="text-blue-700">
+              <p style={{ color: "var(--surfaceColor)" }}>
                 Please review your booking details below
               </p>
             </div>
@@ -822,7 +870,10 @@ const Emergency = () => {
       <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="px-6 py-4 flex justify-between items-center bg-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+            <div
+              className="w-12 h-12 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "var(--accent-color)" }}
+            >
               <Lucide.Ambulance className="text-white" size={24} />
             </div>
             <div>
@@ -836,7 +887,7 @@ const Emergency = () => {
           </div>
           <button
             onClick={() => setShowNearbyView(true)}
-            className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all font-medium flex items-center gap-2"
+            className="btn view-btn flex items-center gap-2"
           >
             <Lucide.MapPin size={20} />
             <span>Near By Ambulance</span>
@@ -850,11 +901,24 @@ const Emergency = () => {
                   <div
                     className={`flex items-center justify-center w-10 h-10 rounded-full mb-2 transition-all ${
                       step === index
-                        ? "bg-green-500 text-white shadow-lg"
+                        ? "shadow-lg"
                         : step > index
-                        ? "bg-green-500 text-white"
+                        ? ""
                         : "bg-gray-200 text-gray-600 border border-gray-300"
                     }`}
+                    style={
+                      step === index
+                        ? {
+                            backgroundColor: "var(--accent-color)",
+                            color: "#fff",
+                          }
+                        : step > index
+                        ? {
+                            backgroundColor: "var(--accent-color)",
+                            color: "#fff",
+                          }
+                        : {}
+                    }
                   >
                     {step > index ? (
                       <Lucide.CheckCircle2 size={20} />
@@ -864,21 +928,27 @@ const Emergency = () => {
                   </div>
                   <p
                     className={`text-sm font-medium transition-colors ${
-                      step === index
-                        ? "text-green-600 font-semibold"
-                        : step > index
-                        ? "text-green-600 font-semibold"
+                      step === index || step > index
+                        ? "font-semibold"
                         : "text-gray-500"
                     }`}
+                    style={
+                      step === index || step > index
+                        ? { color: "var(--accent-color)" }
+                        : {}
+                    }
                   >
                     {stepName}
                   </p>
                 </div>
                 {index < ["Details", "Confirm"].length - 1 && (
                   <div
-                    className={`flex-1 h-1 mx-4 mb-6 rounded transition-colors ${
-                      step > index ? "bg-green-500" : "bg-gray-200"
-                    }`}
+                    className={`flex-1 h-1 mx-4 mb-6 rounded transition-colors"}`}
+                    style={
+                      step > index
+                        ? { backgroundColor: "var(--accent-color)" }
+                        : { backgroundColor: "#e5e7eb" }
+                    }
                   />
                 )}
               </React.Fragment>
@@ -890,7 +960,7 @@ const Emergency = () => {
           {step > 0 && (
             <button
               onClick={() => setStep((prev) => prev - 1)}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+              className="btn btn-secondary"
             >
               Back
             </button>
@@ -898,16 +968,13 @@ const Emergency = () => {
           <div className={`flex gap-3 ${step === 0 ? "ml-auto" : ""}`}>
             {step === 1 ? (
               <>
-                <button
-                  onClick={handleSubmit}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
+                <button onClick={handleSubmit} className="btn view-btn">
                   Submit Booking
                 </button>
                 {calculateEquipmentTotal() > 0 && (
                   <button
                     onClick={handlePayNow}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+                    className="btn view-btn flex items-center gap-2"
                   >
                     <Lucide.CreditCard size={16} /> Pay Now ₹
                     {calculateEquipmentTotal()}
@@ -917,7 +984,7 @@ const Emergency = () => {
             ) : (
               <button
                 onClick={() => setStep((prev) => prev + 1)}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                className="btn view-btn"
               >
                 Next
               </button>
