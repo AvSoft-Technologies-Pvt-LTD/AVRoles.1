@@ -11,8 +11,9 @@ import QuickLinksPanel from "./QuickLinksPanel";
 import NotificationPage from "../../../../components/NotificationPage"; // Adjust the import path as needed
 import MedicalRecordsTemplate from "./MedicalRecordsTemplate";
 import BillingForm from "./BillingForm";
-import MedicalRecordDetails from "./MedicalRecordDetails"; // Adjust the import path as needed
-const DrRoutes = () => {
+import MedicalRecordDetails from "./MedicalRecordDetails";
+import MedicalRecords from "./ MedicalRecords";
+import SecondOpinion from "./SecondOpinion";const DrRoutes = () => {
   return (
     <Routes>
       <Route index element={<Overview />} /> {/* renders at /doctordashboard */}
@@ -20,6 +21,12 @@ const DrRoutes = () => {
       <Route path="patients" element={<PatientList />} />
         <Route path="/notifications" element={<NotificationPage />} />
        <Route path="form" element={<FormsPage />} />
+       <Route path="second-opinion" element={<SecondOpinion/>} />
+      <Route path="medical-record" element={<MedicalRecords/>} />
+
+
+
+<Route path="medical-record-details" element={<MedicalRecordDetails/>} />
       <Route path="quicklinks" element={<QuickLinksPanel />} />
        {/* <Route path="dr-admin" element={<StaffManagement />} /> */}
      <Route path="billing" element={<Payments />} />
@@ -27,7 +34,6 @@ const DrRoutes = () => {
       <Route path="MedicalRecordsTemplate" element={<MedicalRecordsTemplate/>} />
             <Route path="add-billing" element={<BillingForm/>} />
 
-<Route path="medical-record" element={<MedicalRecordDetails/>} />
 
     </Routes>
   );

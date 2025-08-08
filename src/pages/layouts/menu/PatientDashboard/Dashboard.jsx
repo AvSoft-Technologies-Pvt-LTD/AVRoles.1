@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import { CircleUser , Heart, Users, ClipboardCheck, Pencil } from 'lucide-react';
+import { CircleUser, Heart, Users, ClipboardCheck, Pencil } from 'lucide-react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import DashboardOverview from './DashboardOverview';
 import ReusableModal from '../../../../components/microcomponents/Modal';
+import Healthcard from '../../../../components/Healthcard';
 
 const PERSONAL_API_URL = 'https://680cc0c92ea307e081d4edda.mockapi.io/personalHealthDetails';
 const FAMILY_API_URL = 'https://6808fb0f942707d722e09f1d.mockapi.io/FamilyData';
@@ -12,7 +13,7 @@ const PROFILE_API_URL = 'https://6801242781c7e9fbcc41aacf.mockapi.io/api/AV1/use
 
 const initialUserData = {
   name: '', email: '', gender: '', phone: '', dob: '', bloodGroup: '', height: '', weight: '',
-  isAlcoholic: false, isSmoker: false, isTobacco: false, smokingDuration: '', alcoholDuration: '', tobaccoDuration: '', allergies: '', surgeries: '',
+  isAlcoholicUser: false, isSmokerUser: false, isTobaccoUser: false, smokingDuration: '', alcoholDuration: '', tobaccoDuration: '', allergies: '', surgeries: '',
   familyHistory: { diabetes: false, cancer: false, heartDisease: false, mentalHealth: false, disability: false },
   familyMembers: [], additionalDetails: { provider: '', policyNumber: '', coverageType: '', startDate: '', endDate: '', coverageAmount: '', primaryHolder: false }
 };
@@ -32,6 +33,7 @@ function Dashboard() {
   const [modalTitle, setModalTitle] = useState('');
   const [modalMode, setModalMode] = useState('edit');
   const [modalData, setModalData] = useState({});
+  const [showHealthCardModal, setShowHealthCardModal] = useState(false);
   const [profileCompletion, setProfileCompletion] = useState(25);
   const [feedbackMessage, setFeedbackMessage] = useState({ show: false, message: '', type: '' });
   const [editFamilyMember, setEditFamilyMember] = useState(null);
@@ -42,8 +44,8 @@ function Dashboard() {
     { name: 'height', label: 'Height (cm)', type: 'number', colSpan: 1 },
     { name: 'weight', label: 'Weight (kg)', type: 'number', colSpan: 1 },
     { name: 'bloodGroup', label: 'Blood Group', type: 'select', colSpan: 1, options: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(bg => ({ label: bg, value: bg })) },
-    { name: 'surgeries', label: 'Surgeries', type: 'textarea', colSpan: 1, className: 'min-w-[120px] h-8 text-sm px-2 rounded border' },
-    { name: 'allergies', label: 'Allergies', type: 'textarea', colSpan: 2, className: 'min-w-[120px] h-8 text-sm px-2 rounded border' },
+    { name: 'surgeries', label: 'Surgeries', type: 'textarea', colSpan: 1 },
+    { name: 'allergies', label: 'Allergies', type: 'textarea', colSpan: 2 },
     { name: 'isSmoker', label: 'Do you smoke?', type: 'checkbox', colSpan: 1 },
     { name: 'isAlcoholic', label: 'Do you consume alcohol?', type: 'checkbox', colSpan: 1 },
     { name: 'isTobaccoUser', label: 'Do you use tobacco?', type: 'checkbox', colSpan: 1 }
@@ -53,50 +55,46 @@ function Dashboard() {
   const getPersonalFields = (formValues) => {
     const fields = [...basePersonalFields];
 
-    // Collect all duration fields to show in one row if any are checked
-    const durationFields = [];
+    // Add duration fields only if corresponding checkbox is checked
     if (formValues.isSmoker) {
-      durationFields.push({
+      fields.push({
         name: 'smokingDuration',
-        label: 'Since (yr)',
+        label: 'Since (yrs)',
         type: 'number',
         colSpan: 1,
         isDuration: true,
         min: 0,
         max: 200,
-        className: 'min-w-[80px] h-8 text-sm px-2 rounded border mr-2'
+        className: 'min-w-[180px] h-12 text-sm px-3 rounded border'
       });
     }
+
     if (formValues.isAlcoholic) {
-      durationFields.push({
+      fields.push({
         name: 'alcoholDuration',
-        label: 'Since(yr)',
+        label: 'Since (yrs)',
         type: 'number',
         colSpan: 1,
         isDuration: true,
         min: 0,
         max: 200,
-        className: 'min-w-[80px] h-8 text-sm px-2 rounded border mr-2'
+        className: 'min-w-[180px] h-12 text-sm px-3 rounded border'
       });
     }
+
     if (formValues.isTobaccoUser) {
-      durationFields.push({
+      fields.push({
         name: 'tobaccoDuration',
-        label: 'Since(yr)',
+        label: 'Since (yrs)',
         type: 'number',
         colSpan: 1,
         isDuration: true,
         min: 0,
         max: 200,
-        className: 'min-w-[80px] h-8 text-sm px-2 rounded border mr-2'
+        className: 'min-w-[180px] h-12 text-sm px-3 rounded border'
       });
     }
-    // Insert all duration fields as a single row after the checkboxes
-    if (durationFields.length > 0) {
-      // Find the last checkbox index
-      const lastCheckboxIdx = fields.map(f => f.type).lastIndexOf('checkbox');
-      fields.splice(lastCheckboxIdx + 1, 0, ...durationFields);
-    }
+
     return fields;
   };
 
@@ -130,20 +128,16 @@ function Dashboard() {
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!user?.email) return;
-
       try {
         const res = await axios.get(`${PROFILE_API_URL}?email=${encodeURIComponent(user.email)}`);
         const profile = res.data[0];
-
         if (profile) {
           const firstName = profile.firstName || '';
           const lastName = profile.lastName || '';
-
           if (profile?.photo?.blob) {
             const objectUrl = URL.createObjectURL(new Blob([profile.photo.blob], { type: profile.photo.type }));
             profile.photoUrl = objectUrl;
           }
-
           setProfileData({
             name: `${firstName} ${lastName}`.trim(),
             firstName,
@@ -167,8 +161,9 @@ function Dashboard() {
   };
 
   const handleEditClick = () => navigate('/patientdashboard/settings');
-  const handleGenerateCard = () => navigate("/healthcard");
-
+  const handleGenerateCard = () => {
+    setShowHealthCardModal(true);
+  };
   const getSectionCompletionStatus = () => ({
     basic: true,
     personal: Boolean(userData.height && userData.weight && userData.bloodGroup),
@@ -177,7 +172,7 @@ function Dashboard() {
 
   const saveUserData = async (updatedData) => {
     if (!user?.email) return showFeedback('Please login to save data', 'error');
-    const payload = { 
+    const payload = {
       height: updatedData.height,
       weight: updatedData.weight,
       bloodGroup: updatedData.bloodGroup,
@@ -185,7 +180,7 @@ function Dashboard() {
       allergies: updatedData.allergies,
       isSmoker: updatedData.isSmoker,
       isAlcoholic: updatedData.isAlcoholic,
-      isTobacco: updatedData.isTobaccoUser ,
+      isTobacco: updatedData.isTobaccoUser,
       smokingDuration: updatedData.smokingDuration,
       alcoholDuration: updatedData.alcoholDuration,
       tobaccoDuration: updatedData.tobaccoDuration,
@@ -246,9 +241,13 @@ function Dashboard() {
       const cleanedValues = { ...formValues };
       if (!formValues.isSmoker) cleanedValues.smokingDuration = '';
       if (!formValues.isAlcoholic) cleanedValues.alcoholDuration = '';
-      if (!formValues.isTobaccoUser ) cleanedValues.tobaccoDuration = '';
+      if (!formValues.isTobaccoUser) cleanedValues.tobaccoDuration = '';
 
       await saveUserData({ ...userData, ...cleanedValues });
+      setProfileData(prev => ({
+        ...prev,
+        bloodGroup: cleanedValues.bloodGroup || prev.bloodGroup
+      }));
     } else if (activeSection === 'family') {
       const memberData = { ...formValues, email: user.email };
       try {
@@ -333,52 +332,65 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="bg-gradient-to-r from-[#0e1630] via-[#1b2545] to-[#038358] text-white p-4 rounded-xl flex flex-col sm:flex-row sm:items-center gap-4 shadow-lg">
-        <div className="relative w-24 h-24 sm:w-32 sm:h-32">
-          <svg className="absolute -top-2 -left-2 w-[112%] h-[112%] -rotate-90 z-0" viewBox="0 0 36 36">
-            <circle className="text-gray-300" stroke="currentColor" strokeWidth="2" fill="none" r="16" cx="18" cy="18" />
-            <circle stroke={getProgressColor(profileCompletion || 0)} strokeWidth="2" strokeDasharray="100" strokeDashoffset={100 - (profileCompletion || 0)} strokeLinecap="round" fill="none" r="16" cx="18" cy="18" />
-          </svg>
-          <div className="relative w-full h-full rounded-full overflow-hidden bg-white z-10 flex items-center justify-center">
-            {profileData?.photo ? (
-              <img src={profileData.photo} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <CircleUser  className="w-12 h-12 sm:w-20 sm:h-20 text-gray-500" />
-            )}
+        <div className="bg-gradient-to-r from-[#0e1630] via-[#1b2545] to-[#038358] text-white p-4 rounded-xl flex flex-col sm:flex-row sm:items-center gap-4 shadow-lg w-full">
+      <div className="relative w-20 h-20 sm:w-24 sm:h-24">
+      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
+        <circle className="text-gray-300" stroke="currentColor" strokeWidth="2" fill="none" r="16" cx="18" cy="18" />
+        <circle
+          stroke={getProgressColor(profileCompletion || 0)}
+          strokeWidth="2"
+          strokeDasharray="100"
+          strokeDashoffset={100 - (profileCompletion || 0)}
+          strokeLinecap="round"
+          fill="none"
+          r="16"
+          cx="18"
+          cy="18"
+        />
+      </svg>
+      <div className="relative w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+        {profileData?.photo ? (
+          <img src={profileData.photo} alt="Profile" className="w-full h-full object-cover rounded-full" />
+        ) : (
+          <CircleUser className="w-10 h-10 sm:w-16 sm:h-16 text-gray-500" />
+        )}
+      </div>
+      <div className="absolute bottom-0 right-0 bg-yellow-400 text-black px-2 py-1 text-xs font-bold rounded-full z-20">
+        {profileCompletion}%
+      </div>
+    </div>
+      <div className="flex flex-row flex-wrap gap-3 sm:gap-4 items-center flex-1 min-w-0">
+        {[
+          { label: "Name", value: `${profileData.firstName || "Guest"} ${profileData.lastName || ""}`.trim() },
+          { label: "Date of Birth", value: profileData.dob || "N/A" },
+          { label: "Gender", value: profileData.gender || "N/A" },
+          { label: "Phone No.", value: profileData.phone || "N/A" },
+          { label: "Blood Group", value: profileData.bloodGroup || "N/A" },
+        ].map((item, i) => (
+          <div key={i} className="flex flex-col whitespace-nowrap sm:text-base">
+            <span className="text-[#01D48C]  truncate">{item.label}</span>
+            <span className="text-gray-200 truncate">{item.value}</span>
           </div>
-          <div className="absolute bottom-0 right-0 bg-yellow-400 text-black px-2 py-1 text-xs font-bold rounded-full z-20">
-            {profileCompletion}%
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-10 items-center max-w-6xl text-lg">
-          {[
-            { label: "Name", value: `${profileData.firstName || "Guest"} ${profileData.lastName || ""}`.trim() },
-            { label: "Date of Birth", value: profileData.dob || "N/A" },
-            { label: "Gender", value: profileData.gender || "N/A" },
-            { label: "Phone No.", value: profileData.phone || "N/A" },
-          ].map((item, i) => (
-            <div key={i} className="flex flex-col">
-              <span className="text-[#01D48C]">{item.label}</span>
- <span className="text-white-600">{item.value}</span>
-            </div>
-          ))}
-        </div>
-
-        <button onClick={handleGenerateCard} className="shrink-0 px-4 py-4 btn btn-secondary">
+        ))}
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2 items-center justify-center sm:justify-end flex-shrink-0">
+        <button
+          className="px-3 py-2 rounded-full border-[var(--accent-color)] text-[var(--accent-color)] bg-white hover:bg-[var(--accent-color)] hover:text-[var(--surface-color)] transition-all duration-300 whitespace-nowrap text-sm"
+          onClick={handleGenerateCard}
+        >
           View Health Card
         </button>
-
         <div className="relative group">
-          <Pencil onClick={handleEditClick} className="w-9 h-8 p-1.5 rounded-full bg-white text-black cursor-pointer hover:scale-110 transition-transform duration-200" />
+          <Pencil onClick={handleEditClick} className="w-8 h-8 p-1 rounded-full bg-white text-black cursor-pointer hover:scale-110 transition-transform duration-200" />
           <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-[11px] bg-white text-black rounded-md px-2 py-1 opacity-0 scale-90 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-300 shadow-lg z-10">
             Edit
           </span>
         </div>
       </div>
+    </div>
       <div className="mt-6 sm:mt-10 flex gap-4 sm:gap -6 flex-wrap">
         {sections.map(({ id, name, icon }) => {
-          const Icon = icon === 'user' ? CircleUser  : icon === 'heart' ? Heart : Users;
+          const Icon = icon === 'user' ? CircleUser : icon === 'heart' ? Heart : Users;
           return (
             <button key={id} onClick={() => id !== 'basic' && openModal(id)} className={`px-4 py-2 rounded-lg flex items-center gap-2 text-white text-sm sm:text-base ${activeSection === id ? 'bg-[#0e1630]' : 'bg-[#1f2a4d] hover:bg-[#1b264a]'} transition-all duration-300`}>
               <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -430,7 +442,24 @@ function Dashboard() {
             ))}
           </div>
         )}
+
       />
+
+      {showHealthCardModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center">
+          <button
+            className="absolute top-1/5 right-1/3 translate-x-1/3 -translate-y-1/3 text-[var(--primary-color)] mt-6 border border-[var(--primary-color)] rounded-full px-2 -mr-4 text-2xl"
+            onClick={() => setShowHealthCardModal(false)}
+          >
+            &times;
+          </button>
+
+
+          <Healthcard hideLogin isOpen onClose={() => setShowHealthCardModal(false)} />
+        </div>
+
+      )}
+
 
       <div className="mt-8">
         <DashboardOverview />

@@ -1,19 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Loader2, Edit } from "lucide-react";
@@ -21,8 +5,7 @@ import { ToastContainer, toast } from "react-toastify";
 import DynamicTable from "../../../../components/microcomponents/DynamicTable";
 import Pagination from "../../../../components/Pagination";
 import VirtualConsultationTab from "./VirtualConsultationTab";
-import { FiExternalLink } from "react-icons/fi";
-
+import { FiExternalLink ,FiPhone} from "react-icons/fi";
 import "react-toastify/dist/ReactToastify.css";
 import { FiArrowRight, FiChevronsLeft, FiChevronsRight } from "react-icons/fi";
 
@@ -198,6 +181,72 @@ export default function PatientList() {
   const I = (k, v) =>
     setIpdState((s) => ({ ...s, ipdData: { ...s.ipdData, [k]: v } }));
 
+  const viewPatientDetails = async (a) => { 
+    setSelectedPatient(a); 
+    setPersonalDetails(null); 
+    setFamily([]); 
+    setVitals(null); 
+    setLoadingDetails(true); 
+    try { 
+      const { data: personalData } = await axios.get("https://680cc0c92ea307e081d4edda.mockapi.io/personalHealthDetails"); 
+      const p = personalData.find((p) => (p.email || "").trim().toLowerCase() === (a.email || "").trim().toLowerCase()); 
+      if (p) setPersonalDetails({ height: p.height, weight: p.weight, bloodGroup: p.bloodGroup, surgeries: p.surgeries, allergies: p.allergies, isSmoker: p.isSmoker, isAlcoholic: p.isAlcoholic }); 
+      try { 
+        const { data: familyData } = await axios.get("https://6808fb0f942707d722e09f1d.mockapi.io/FamilyData"); 
+        setFamily(familyData.filter((f) => (f.email || "").trim().toLowerCase() === (a.email || "").trim().toLowerCase())); 
+      } catch { 
+        setFamily([]); 
+      } 
+      try { 
+        const { data: vitalsData } = await axios.get("https://6808fb0f942707d722e09f1d.mockapi.io/health-summary"); 
+        const v = vitalsData.find((v) => (v.email || "").trim().toLowerCase() === (a.email || "").trim().toLowerCase()); 
+        setVitals(v ? { bloodPressure: v.bloodPressure || "Not recorded", heartRate: v.heartRate || "Not recorded", temperature: v.temperature || "Not recorded", bloodSugar: v.bloodSugar || "Not recorded" } : null); 
+      } catch { 
+        setVitals(null); 
+      } 
+    } catch {} 
+    setLoadingDetails(false); 
+  };
+
+  // Function to fetch family diseases (K/C/O) and vitals for medical records
+  const fetchPatientMedicalData = async (email) => {
+    try {
+      // Fetch family diseases data
+      const { data: familyData } = await axios.get("https://6808fb0f942707d722e09f1d.mockapi.io/FamilyData");
+      const patientFamily = familyData.filter((f) => 
+        (f.email || "").trim().toLowerCase() === (email || "").trim().toLowerCase()
+      );
+      
+      // Extract all diseases from family members
+      const allDiseases = patientFamily.reduce((diseases, member) => {
+        if (member.diseases && Array.isArray(member.diseases)) {
+          return [...diseases, ...member.diseases];
+        }
+        return diseases;
+      }, []);
+      
+      // Remove duplicates
+      const uniqueDiseases = [...new Set(allDiseases)];
+      
+      // Fetch vitals data
+      const { data: vitalsData } = await axios.get("https://6808fb0f942707d722e09f1d.mockapi.io/health-summary");
+      const patientVitals = vitalsData.find((v) => 
+        (v.email || "").trim().toLowerCase() === (email || "").trim().toLowerCase()
+      );
+      
+      return {
+        diseases: uniqueDiseases,
+        vitals: patientVitals || null
+      };
+    } catch (error) {
+      console.error("Error fetching medical data:", error);
+      return {
+        diseases: [],
+        vitals: null
+      };
+    }
+  };
+
   // Define table columns for OPD
   const opdColumns = [
     { header: "ID", accessor: "id" },
@@ -222,14 +271,15 @@ export default function PatientList() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => handleAddRecord(row)}
-            className="edit-btn"
+            className="px-2 py-1 text-sm  edit-btn"
           >
-            Visit Pad
+           Add Record
           </button>
+          
           <TeleConsultFlow phone={row.phone} />
           <button
             title="View Medical Record"
-            onClick={() => {
+            onClick={async () => {
               // Calculate age from dob
               let age = '';
               if (row.dob) {
@@ -241,25 +291,31 @@ export default function PatientList() {
                   age--;
                 }
               }
+              
+              // Fetch medical data before navigation
+              const medicalData = await fetchPatientMedicalData(row.email);
+              
               navigate("/doctordashboard/medical-record", {
-  state: {
-    patientName: row.name,
-    email: row.email || '', // Pass email
-    phone: row.phone || '', // Pass phone number
-    gender: row.gender || row.sex || '',
-    temporaryAddress: row.temporaryAddress || row.addressTemp || row.address || '',
-    address: row.address || row.temporaryAddress || row.addressTemp || '',
-    addressTemp: row.addressTemp || row.temporaryAddress || row.address || '',
-    dob: row.dob,
-    age: age
-  }
-});
+                state: {
+                  patientName: row.name,
+                  email: row.email || '',
+                  phone: row.phone || '',
+                  gender: row.gender || row.sex || '',
+                  temporaryAddress: row.temporaryAddress || row.addressTemp || row.address || '',
+                  address: row.address || row.temporaryAddress || row.addressTemp || '',
+                  addressTemp: row.addressTemp || row.temporaryAddress || row.address || '',
+                  dob: row.dob,
+                  age: age,
+                  diagnosis: row.diagnosis || "--",
+                  "K/C/O": medicalData.diseases.join(", ") || "--",
+                  vitals: medicalData.vitals
+                }
+              });
             }}
             className="text-blue-600 hover:text-blue-800"
             style={{ display: 'flex', alignItems: 'center' }}
           >
-             <FiExternalLink/>
-
+             <FiExternalLink size={18}/>
           </button>
         </div>
       )
@@ -316,14 +372,14 @@ export default function PatientList() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => handleAddRecord(row)}
-            className="edit-btn"
+            className="px- py-1 text-sm  edit-btn"
           >
             Add Record
           </button>
-          <TeleConsultFlow phone={row.phone} />
+          <TeleConsultFlow   size={6}  phone={row.phone} />
           <button
             title="View Medical Record"
-            onClick={() => {
+            onClick={async () => {
               // Calculate age from dob
               let age = '';
               const name = row.name || `${row.firstName || ''} ${row.middleName || ''} ${row.lastName || ''}`.replace(/\s+/g, ' ').trim();
@@ -336,30 +392,39 @@ export default function PatientList() {
                   age--;
                 }
               }
-              // ...existing code...
-navigate("/doctordashboard/medical-record", {
-  state: {
-    patientName: row.name,
-    email: row.email || '', // Pass email
-    phone: row.phone || '', // Pass phone
-    gender: row.gender || row.sex || '',
-    temporaryAddress: row.temporaryAddress || row.addressTemp || row.address || '',
-    address: row.address || row.temporaryAddress || row.addressTemp || '',
-    addressTemp: row.addressTemp || row.temporaryAddress || row.address || '',
-    dob: row.dob || '',
-    age: age,
-    bloodType: row.bloodGroup || row.bloodType || '',
-    regNo: row.regNo || '2025/072/0032722',
-    mobileNo: row.mobileNo || row.phone || '',
-    department: row.department || 'Ophthalmology',
-    // Add any other fields needed for MedicalRecordsTemplate/MedicalRecordsTab
-  }
-});
+              
+              // Fetch medical data before navigation
+              const medicalData = await fetchPatientMedicalData(row.email);
+              
+          navigate("/doctordashboard/medical-record", {
+            state: {
+              patientName: name,
+              email: row.email || '',
+              phone: row.phone || '',
+              gender: row.gender || row.sex || '',
+              temporaryAddress: row.temporaryAddress || row.addressTemp || row.address || '',
+              address: row.address || row.temporaryAddress || row.addressTemp || '',
+              addressTemp: row.addressTemp || row.temporaryAddress || row.address || '',
+              dob: row.dob || '',
+              age: age,
+              bloodType: row.bloodGroup || row.bloodType || '',
+              regNo: row.regNo || '2025/072/0032722',
+              mobileNo: row.mobileNo || row.phone || '',
+              department: row.department || 'Ophthalmology',
+              diagnosis: row.diagnosis || "--",
+              "K/C/O": medicalData.diseases.join(", ") || "--",
+              vitals: medicalData.vitals,
+              // Pass ward and bed info if present
+              wardNo: row.wardNo || row.wardNumber || '',
+              bedNo: row.bedNo || row.bedNumber || '',
+              wardType: row.wardType || ''
+            }
+          });
             }}
             className="text-blue-600 hover:text-blue-800"
             style={{ display: 'flex', alignItems: 'center' }}
           >
-        <FiExternalLink/>
+             <FiExternalLink size={18}/>
           </button>
         </div>
       )
@@ -1226,7 +1291,43 @@ navigate("/doctordashboard/medical-record", {
     }
   };
 
- const viewPatientDetails = async (a) => { setSelectedPatient(a); setPersonalDetails(null); setFamily([]); setVitals(null); setLoadingDetails(true); try { const { data: personalData } = await axios.get("https://680cc0c92ea307e081d4edda.mockapi.io/personalHealthDetails"); const p = personalData.find((p) => (p.email || "").trim().toLowerCase() === (a.email || "").trim().toLowerCase()); if (p) setPersonalDetails({ height: p.height, weight: p.weight, bloodGroup: p.bloodGroup, surgeries: p.surgeries, allergies: p.allergies, isSmoker: p.isSmoker, isAlcoholic: p.isAlcoholic }); try { const { data: familyData } = await axios.get("https://6808fb0f942707d722e09f1d.mockapi.io/FamilyData"); setFamily(familyData.filter((f) => (f.email || "").trim().toLowerCase() === (a.email || "").trim().toLowerCase())); } catch { setFamily([]); } try { const { data: vitalsData } = await axios.get("https://6808fb0f942707d722e09f1d.mockapi.io/health-summary"); const v = vitalsData.find((v) => (v.email || "").trim().toLowerCase() === (a.email || "").trim().toLowerCase()); setVitals(v ? { bloodPressure: v.bloodPressure || "Not recorded", heartRate: v.heartRate || "Not recorded", temperature: v.temperature || "Not recorded", bloodSugar: v.bloodSugar || "Not recorded" } : null); } catch { setVitals(null); } } catch {} setLoadingDetails(false); };
+  const handleRowClick = (row) => {
+    viewPatientDetails(row);
+  };
+
+  const handleViewMedicalRecord = async (row) => {
+    // Calculate age from dob
+    let age = '';
+    if (row.dob) {
+      const birthDate = new Date(row.dob);
+      const today = new Date();
+      age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+    }
+    
+    // Fetch medical data before navigation
+    const medicalData = await fetchPatientMedicalData(row.email);
+    
+    navigate("/doctordashboard/medical-record", {
+      state: {
+        patientName: row.name,
+        email: row.email || '', // Pass email
+        gender: row.gender || '',
+        age: age,
+        bloodType: row.bloodGroup || row.bloodType || '',
+        regNo: row.regNo || '2025/072/0032722',
+        mobileNo: row.mobileNo || row.phone || '',
+        department: row.department || 'Ophthalmology',
+        "K/C/O": medicalData.diseases.join(", ") || "--",
+        diagnosis: row.diagnosis || "--",
+        vitals: medicalData.vitals,
+        // Add any other fields needed for MedicalRecordsTemplate/MedicalRecordsTab
+      }
+    });
+  };
 
   if (showForm) return <div>Form Page Component</div>;
 
@@ -1256,9 +1357,9 @@ navigate("/doctordashboard/medical-record", {
               <button
                 key={tab.value}
                 onClick={() => handleTabChange(tab.value)}
-                className={`px-4 py-2 font-medium  border-b-2 transition-colors ${
+                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
                   activeTab === tab.value
-                    ? ""
+                    ? " "
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
@@ -1462,3 +1563,13 @@ navigate("/doctordashboard/medical-record", {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+

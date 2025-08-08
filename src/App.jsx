@@ -42,6 +42,7 @@ import TokenDisplay from "./components/Token-Display";
 // Toast
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import InitialAssessmentForm from "./components/InitialAssesment";
 
 // ---------------------- Helpers ----------------------
 
@@ -117,6 +118,10 @@ const App = () => {
   // ✅ Shared module routes for all dashboards
   const sharedRoutes = (
     <>
+   <Route
+      path="specialization"
+      element={<InitialAssessmentForm />}
+    />
       <Route path="dr-admin" element={<StaffManagement />} />
       <Route path="pharmacymodule" element={<PharmacyManagement />} />
       <Route path="labmodule" element={<LabManagement />} />

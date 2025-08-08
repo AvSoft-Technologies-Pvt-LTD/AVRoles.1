@@ -28,27 +28,122 @@ const PrintContent = ({ requestData, selectedRecord, formData }) => (
     </div>
     <div className="patient-section" style={{ marginBottom: "25px" }}>
       <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "15px", color: "#333", borderBottom: "1px solid #ddd", paddingBottom: "5px" }}>Patient Information</h3>
-      <div className="patient-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "15px" }}>
+      <div className="patient-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0 30px", rowGap: "10px" }}>
         {Object.entries(requestData.patientInfo).map(([key, value]) => (
-          <div key={key} className="patient-item" style={{ padding: "10px", backgroundColor: "#f8f9fa", borderRadius: "6px" }}>
-            <strong>{key.replace(/([A-Z])/g, " $1") + ":"}</strong>
-            <span style={{ marginLeft: "10px" }}>{value}</span>
+          <div key={key} style={{ marginBottom: 0 }}>
+            <strong style={{ color: "#555" }}>{key.replace(/([A-Z])/g, " $1") + ":"}</strong>
+            <span style={{ color: "#0E1630", marginLeft: 8 }}>{value}</span>
           </div>
         ))}
-        <div className="patient-item" style={{ padding: "10px", backgroundColor: "#f8f9fa", borderRadius: "6px" }}>
-          <strong>K/C/O:</strong>
-          <span style={{ marginLeft: "10px" }}>{selectedRecord["K/C/O"] ?? "--"}</span>
+        <div>
+          <strong style={{ color: "#555" }}>K/C/O:</strong>
+          <span style={{ color: "#0E1630", marginLeft: 8 }}>{selectedRecord["K/C/O"] ?? "--"}</span>
         </div>
       </div>
     </div>
     <div className="request-details" style={{ marginBottom: "30px" }}>
       <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "15px", color: "#333", borderBottom: "1px solid #ddd", paddingBottom: "5px" }}>Consultation Request Details</h3>
-      {Object.entries(formData).filter(([key]) => !["contactEmail", "contactPhone"].includes(key)).map(([key, value]) => (
-        <div key={key} className="detail-item" style={{ marginBottom: "15px", padding: "10px", border: "1px solid #e0e0e0", borderRadius: "6px" }}>
-          <div className="detail-label" style={{ fontWeight: "bold", color: "#555", marginBottom: "5px" }}>{key.replace(/([A-Z])/g, " $1") + ":"}</div>
-          <div className="detail-value" style={{ color: "#333" }}>{value || "Not specified"}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0 30px", rowGap: "10px" }}>
+        {Object.entries(formData)
+          .filter(([key]) => !["contactEmail", "contactPhone"].includes(key))
+          .map(([key, value]) => (
+            <div key={key} style={{ marginBottom: "0" }}>
+              <strong style={{ color: "#555" }}>{key.replace(/([A-Z])/g, " $1") + ":"}</strong>
+              <span style={{ color: "#01D48C", marginLeft: 8 }}>{value || "Not specified"}</span>
+            </div>
+          ))}
+      </div>
+    </div>
+    {/* Medical Records Preview Section (matches print PDF) - page break before */}
+    <div style={{ pageBreakBefore: 'always', breakBefore: 'page', marginTop: "40px", fontFamily: "Arial, sans-serif", maxWidth: "900px", marginLeft: "auto", marginRight: "auto" }}>
+      <div style={{ padding: "24px", background: "linear-gradient(90deg, #01B07A 0%, #1A223F 100%)", color: "#fff", borderRadius: "18px 18px 0 0" }}>
+        <h2 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "8px" }}>Medical Records Preview</h2>
+        <p style={{ fontSize: "16px", color: "#e0e0e0", marginBottom: 0 }}>Complete patient medical information</p>
+      </div>
+      <div style={{ background: "#fff", borderRadius: "0 0 18px 18px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", padding: "32px" }}>
+        <div style={{ marginBottom: "24px" }}>
+          <h3 style={{ fontSize: "22px", fontWeight: "bold", color: "#1A223F", marginBottom: "12px" }}>{selectedRecord.patientName}</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", fontSize: "15px", color: "#333" }}>
+            <div>Age: {selectedRecord.age}</div>
+            <div>Gender: {selectedRecord.sex}</div>
+            <div>Hospital: {selectedRecord.hospitalName}</div>
+            <div>Diagnosis: {selectedRecord.diagnosis}</div>
+            <div>K/C/O: {selectedRecord["K/C/O"] ?? "--"}</div>
+          </div>
         </div>
-      ))}
+        <div style={{ marginBottom: "24px" }}>
+          <h4 style={{ fontSize: "18px", fontWeight: "bold", color: "#0E1630", marginBottom: "10px" }}>Vitals Summary</h4>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "10px" }}>
+            {Object.entries(selectedRecord.vitals || {}).map(([key, value]) => (
+              <div key={key} style={{ background: "#f8fafc", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "10px" }}>
+                <div style={{ fontSize: "12px", color: "#666", marginBottom: "2px" }}>{key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase())}</div>
+                <div style={{ fontSize: "15px", fontWeight: 600, color: "#222" }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom: "24px" }}>
+          <h4 style={{ fontSize: "18px", fontWeight: "bold", color: "#0E1630", marginBottom: "10px" }}>Medical Information</h4>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+            {Object.entries(selectedRecord?.medicalDetails || {}).map(([label, value]) => (
+              <div key={label} style={{ background: "#fff", border: "1px solid #f3f4f6", borderRadius: "10px", padding: "16px" }}>
+                <div style={{ fontWeight: "bold", fontSize: "13px", color: "#666", marginBottom: "4px" }}>{label.replace(/([A-Z])/g, " $1")}</div>
+                <div style={{ color: "#222", fontSize: "14px" }}>{value || "N/A"}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom: "24px" }}>
+          <h4 style={{ fontSize: "18px", fontWeight: "bold", color: "#0E1630", marginBottom: "10px" }}>Prescriptions</h4>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+            <thead>
+              <tr style={{ background: "#f1f5f9" }}>
+                <th style={{ padding: "8px", border: "1px solid #e5e7eb" }}>Date</th>
+                <th style={{ padding: "8px", border: "1px solid #e5e7eb" }}>Doctor Name</th>
+                <th style={{ padding: "8px", border: "1px solid #e5e7eb" }}>Medicines</th>
+                <th style={{ padding: "8px", border: "1px solid #e5e7eb" }}>Instructions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(selectedRecord.prescriptionsData || []).map((row, idx) => (
+                <tr key={idx}>
+                  <td style={{ padding: "8px", border: "1px solid #e5e7eb" }}>{row.date}</td>
+                  <td style={{ padding: "8px", border: "1px solid #e5e7eb" }}>{row.doctorName}</td>
+                  <td style={{ padding: "8px", border: "1px solid #e5e7eb" }}>{row.medicines}</td>
+                  <td style={{ padding: "8px", border: "1px solid #e5e7eb" }}>{row.instructions}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h4 style={{ fontSize: "18px", fontWeight: "bold", color: "#0E1630", marginBottom: "10px" }}>Lab Tests</h4>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+            <thead>
+              <tr style={{ background: "#f1f5f9" }}>
+                <th style={{ padding: "8px", border: "1px solid #e5e7eb" }}>Date</th>
+                <th style={{ padding: "8px", border: "1px solid #e5e7eb" }}>Test Name</th>
+                <th style={{ padding: "8px", border: "1px solid #e5e7eb" }}>Result</th>
+                <th style={{ padding: "8px", border: "1px solid #e5e7eb" }}>Normal Range</th>
+                <th style={{ padding: "8px", border: "1px solid #e5e7eb" }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(selectedRecord.labTestsData || []).map((row, idx) => (
+                <tr key={idx}>
+                  <td style={{ padding: "8px", border: "1px solid #e5e7eb" }}>{row.date}</td>
+                  <td style={{ padding: "8px", border: "1px solid #e5e7eb" }}>{row.testName}</td>
+                  <td style={{ padding: "8px", border: "1px solid #e5e7eb" }}>{row.result}</td>
+                  <td style={{ padding: "8px", border: "1px solid #e5e7eb" }}>{row.normalRange}</td>
+                  <td style={{ padding: "8px", border: "1px solid #e5e7eb" }}>
+                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "8px", background: row.status === "Normal" ? "#bbf7d0" : "#fecaca", color: row.status === "Normal" ? "#166534" : "#991b1b", fontWeight: 600 }}>{row.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -229,66 +324,160 @@ const SecondOpinion = () => {
   const handleInputChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
   const handleDoctorSelect = (doctor) => { setFormData((prev) => ({ ...prev, selectedDoctor: doctor })); setIsDropdownOpen(false); };
   const handleBack = () => navigate(-1);
-  const generateRequestData = () => ({ id: `SO-${Date.now()}`, requestDate: new Date().toLocaleDateString("en-GB"), patientInfo: { name: selectedRecord.patientName, age: selectedRecord.age, sex: selectedRecord.sex, patientId: selectedRecord.id, hospitalName: selectedRecord.hospitalName, diagnosis: selectedRecord.diagnosis, visitDate: selectedRecord.dateOfVisit || selectedRecord.dateOfAdmission || selectedRecord.dateOfConsultation, }, });
+  const generateRequestData = () => ({ id: `SO-${Date.now()}`, requestDate: new Date().toLocaleDateString("en-GB"), patientInfo: { Name: selectedRecord.patientName, Age: selectedRecord.age, Sex: selectedRecord.sex, patientId: selectedRecord.id, HospitalName: selectedRecord.hospitalName, Diagnosis: selectedRecord.diagnosis, VisitDate: selectedRecord.dateOfVisit || selectedRecord.dateOfAdmission || selectedRecord.dateOfConsultation, }, });
   const generateMessageContent = () => {
     const requestData = generateRequestData();
     return { subject: `Second Opinion Request - ${requestData.patientInfo.name} (${requestData.id})`, body: `SECOND OPINION REQUEST\n\nRequest Details:\n• Request ID: ${requestData.id}\n• Date: ${requestData.requestDate}\n• Status: Pending Review\n\nPatient Information:\n• Name: ${requestData.patientInfo.name}\n• Age: ${requestData.patientInfo.age}\n• Gender: ${requestData.patientInfo.sex}\n• Hospital: ${requestData.patientInfo.hospitalName}\n• Diagnosis: ${requestData.patientInfo.diagnosis}\n• Visit Date: ${requestData.patientInfo.visitDate}\n• K/C/O: ${selectedRecord["K/C/O"] ?? "--"}\n\nConsultation Request Details:\n• Selected Doctor: ${formData.selectedDoctor || "Not specified"}\n• Urgency Level: ${formData.urgencyLevel || "Not specified"}\n• Preferred Mode: ${formData.preferredMode || "Not specified"}\n• Additional Notes: ${formData.additionalNotes || "Not specified"}\n\nMedical Records: Complete patient medical history, vitals, prescriptions, and lab reports are included with this request.\n\nGenerated on: ${new Date().toLocaleString()}\nFor queries, please contact the medical records department.` };
   }
 
+  // Generate the Medical Records Preview HTML for printing
+  const generateMedicalRecordsPreviewHTML = () => {
+    return `
+      <div style="margin-top:40px; font-family: Arial, sans-serif; max-width: 900px; margin-left:auto; margin-right:auto;">
+        <div style="padding: 24px; background: linear-gradient(90deg, #01B07A 0%, #1A223F 100%); color: #fff; border-radius: 18px 18px 0 0;">
+          <h2 style="font-size: 28px; font-weight: bold; margin-bottom: 8px;">Medical Records Preview</h2>
+          <p style="font-size: 16px; color: #e0e0e0; margin-bottom: 0;">Complete patient medical information</p>
+        </div>
+        <div style="background: #fff; border-radius: 0 0 18px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 32px;">
+          <div style="margin-bottom: 24px;">
+            <h3 style="font-size: 22px; font-weight: bold; color: #1A223F; margin-bottom: 12px;">${selectedRecord.patientName}</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 15px; color: #333;">
+              <div>Age: ${selectedRecord.age}</div>
+              <div>Gender: ${selectedRecord.sex}</div>
+              <div>Hospital: ${selectedRecord.hospitalName}</div>
+              <div>Diagnosis: ${selectedRecord.diagnosis}</div>
+              <div>K/C/O: ${selectedRecord["K/C/O"] ?? "--"}</div>
+            </div>
+          </div>
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-size: 18px; font-weight: bold; color: #0E1630; margin-bottom: 10px;">Vitals Summary</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+              ${Object.entries(selectedRecord.vitals || {}).map(([key, value]) => `
+                <div style='background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:10px;'>
+                  <div style='font-size:12px; color:#666; margin-bottom:2px;'>${key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase())}</div>
+                  <div style='font-size:15px; font-weight:600; color:#222;'>${value}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-size: 18px; font-weight: bold; color: #0E1630; margin-bottom: 10px;">Medical Information</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+              ${Object.entries(selectedRecord?.medicalDetails || {}).map(([label, value]) => `
+                <div style='background:#fff; border:1px solid #f3f4f6; border-radius:10px; padding:16px;'>
+                  <div style='font-weight:bold; font-size:13px; color:#666; margin-bottom:4px;'>${label.replace(/([A-Z])/g, " $1")}</div>
+                  <div style='color:#222; font-size:14px;'>${value || "N/A"}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-size: 18px; font-weight: bold; color: #0E1630; margin-bottom: 10px;">Prescriptions</h4>
+            <table style='width:100%; border-collapse:collapse; font-size:14px;'>
+              <thead>
+                <tr style='background:#f1f5f9;'>
+                  <th style='padding:8px; border:1px solid #e5e7eb;'>Date</th>
+                  <th style='padding:8px; border:1px solid #e5e7eb;'>Doctor Name</th>
+                  <th style='padding:8px; border:1px solid #e5e7eb;'>Medicines</th>
+                  <th style='padding:8px; border:1px solid #e5e7eb;'>Instructions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(selectedRecord.prescriptionsData || []).map(row => `
+                  <tr>
+                    <td style='padding:8px; border:1px solid #e5e7eb;'>${row.date}</td>
+                    <td style='padding:8px; border:1px solid #e5e7eb;'>${row.doctorName}</td>
+                    <td style='padding:8px; border:1px solid #e5e7eb;'>${row.medicines}</td>
+                    <td style='padding:8px; border:1px solid #e5e7eb;'>${row.instructions}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h4 style="font-size: 18px; font-weight: bold; color: #0E1630; margin-bottom: 10px;">Lab Tests</h4>
+            <table style='width:100%; border-collapse:collapse; font-size:14px;'>
+              <thead>
+                <tr style='background:#f1f5f9;'>
+                  <th style='padding:8px; border:1px solid #e5e7eb;'>Date</th>
+                  <th style='padding:8px; border:1px solid #e5e7eb;'>Test Name</th>
+                  <th style='padding:8px; border:1px solid #e5e7eb;'>Result</th>
+                  <th style='padding:8px; border:1px solid #e5e7eb;'>Normal Range</th>
+                  <th style='padding:8px; border:1px solid #e5e7eb;'>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(selectedRecord.labTestsData || []).map(row => `
+                  <tr>
+                    <td style='padding:8px; border:1px solid #e5e7eb;'>${row.date}</td>
+                    <td style='padding:8px; border:1px solid #e5e7eb;'>${row.testName}</td>
+                    <td style='padding:8px; border:1px solid #e5e7eb;'>${row.result}</td>
+                    <td style='padding:8px; border:1px solid #e5e7eb;'>${row.normalRange}</td>
+                    <td style='padding:8px; border:1px solid #e5e7eb;'><span style='display:inline-block; padding:2px 8px; border-radius:8px; background:${row.status === "Normal" ? "#bbf7d0" : "#fecaca"}; color:${row.status === "Normal" ? "#166534" : "#991b1b"}; font-weight:600;'>${row.status}</span></td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
   const generatePrintTemplate = () => {
     const requestData = generateRequestData();
+    // Patient Info as grid
+    const patientInfoGrid = `
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 30px; row-gap: 10px;">
+        <div><strong>Name:</strong> <span style='color:#0E1630;'>${requestData.patientInfo.name}</span></div>
+        <div><strong>Age:</strong> <span style='color:#0E1630;'>${requestData.patientInfo.age}</span></div>
+        <div><strong>Gender:</strong> <span style='color:#0E1630;'>${requestData.patientInfo.sex}</span></div>
+        <div><strong>Patient ID:</strong> <span style='color:#0E1630;'>${requestData.patientInfo.patientId}</span></div>
+        <div><strong>Hospital:</strong> <span style='color:#0E1630;'>${requestData.patientInfo.hospitalName}</span></div>
+        <div><strong>Diagnosis:</strong> <span style='color:#0E1630;'>${requestData.patientInfo.diagnosis}</span></div>
+        <div><strong>Visit Date:</strong> <span style='color:#0E1630;'>${requestData.patientInfo.visitDate}</span></div>
+        <div><strong>K/C/O:</strong> <span style='color:#0E1630;'>${selectedRecord["K/C/O"] ?? "--"}</span></div>
+      </div>
+    `;
+    // Consultation Request Details as grid
+    const consultDetailsGrid = `
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 30px; row-gap: 10px;">
+        <div><strong>Selected Doctor:</strong> <span style='color:#01D48C;'>${formData.selectedDoctor || "Not specified"}</span></div>
+        <div><strong>Urgency Level:</strong> <span style='color:#01D48C;'>${formData.urgencyLevel || "Not specified"}</span></div>
+        <div><strong>Preferred Mode:</strong> <span style='color:#01D48C;'>${formData.preferredMode || "Not specified"}</span></div>
+        <div><strong>Additional Notes:</strong> <span style='color:#01D48C;'>${formData.additionalNotes || "Not specified"}</span></div>
+      </div>
+    `;
     return `
       <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px;">
           <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">SECOND OPINION REQUEST</h1>
           <p style="font-size: 16px; color: #666; margin: 0;">Expert Medical Consultation Form</p>
         </div>
-        
         <div style="margin-bottom: 25px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
           <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333;">Request Information</h3>
-          <p style="margin: 5px 0;"><strong>Request ID:</strong> ${requestData.id}</p>
-          <p style="margin: 5px 0;"><strong>Date of Request:</strong> ${requestData.requestDate}</p>
-          <p style="margin: 5px 0;"><strong>Status:</strong> Pending Review</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 30px 40px;">
+            <div><strong>Request ID:</strong> <span style='color:#0E1630;'>${requestData.id}</span></div>
+            <div><strong>Date of Request:</strong> <span style='color:#0E1630;'>${requestData.requestDate}</span></div>
+            <div><strong>Status:</strong> <span style='color:#0E1630;'>Pending Review</span></div>
+          </div>
         </div>
-        
         <div style="margin-bottom: 25px; padding: 15px; background-color: #e8f5e8; border-radius: 8px; border: 1px solid #4caf50;">
           <h4 style="font-size: 16px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">✓ Medical Records Attached</h4>
           <p style="margin: 0; color: #2e7d32;">Complete patient medical history, vitals, prescriptions, and lab reports are included with this request.</p>
         </div>
-        
         <div style="margin-bottom: 25px;">
           <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Patient Information</h3>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Name:</strong> ${requestData.patientInfo.name}</div>
-            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Age:</strong> ${requestData.patientInfo.age}</div>
-            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Gender:</strong> ${requestData.patientInfo.sex}</div>
-            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Patient ID:</strong> ${requestData.patientInfo.patientId}</div>
-            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Hospital:</strong> ${requestData.patientInfo.hospitalName}</div>
-            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Diagnosis:</strong> ${requestData.patientInfo.diagnosis}</div>
-            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>Visit Date:</strong> ${requestData.patientInfo.visitDate}</div>
-            <div style="padding: 10px; background-color: #f8f9fa; border-radius: 6px;"><strong>K/C/O:</strong> ${selectedRecord["K/C/O"] ?? "--"}</div>
-          </div>
+          ${patientInfoGrid}
         </div>
-        
         <div style="margin-bottom: 30px;">
           <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Consultation Request Details</h3>
-          <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px;">
-            <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Selected Doctor:</div>
-            <div style="color: #333;">${formData.selectedDoctor || "Not specified"}</div>
-          </div>
-          <div style="margin-bottom: 15px; padding: 10px, border: 1px solid #e0e0e0; border-radius: 6px;">
-            <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Urgency Level:</div>
-            <div style="color: #333;">${formData.urgencyLevel || "Not specified"}</div>
-          </div>
-          <div style="margin-bottom: 15px; padding: 10px, border: 1px solid #e0e0e0; border-radius: 6px;">
-            <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Preferred Mode:</div>
-            <div style="color: #333;">${formData.preferredMode || "Not specified"}</div>
-          </div>
-          <div style="margin-bottom: 15px; padding: 10px, border: 1px solid #e0e0e0; border-radius: 6px;">
-            <div style="font-weight: bold; color: #555; margin-bottom: 5px;">Additional Notes:</div>
-            <div style="color: #333;">${formData.additionalNotes || "Not specified"}</div>
-          </div>
+          ${consultDetailsGrid}
         </div>
+      </div>
+      <!-- Medical Records Preview Section on next page -->
+      <div style="page-break-before: always; break-before: page;">
+        ${generateMedicalRecordsPreviewHTML()}
       </div>
     `;
   };

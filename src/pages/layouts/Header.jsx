@@ -180,8 +180,33 @@ const HeaderWithNotifications = () => {
             </div>
           ) : (
             <div className="flex items-center gap-4 text-[#021630]">
+              {/* Generate Button before menu */}
               {["doctor", "hospital"].includes(user?.userType?.toLowerCase()) && (
-                <ModulesMenu user={user} />
+                <>
+                  <button
+  className="btn btn-primary flex items-center"
+  onClick={() => {
+    const specialization =
+      localStorage.getItem("selectedSpecialization") || "General Physician";
+    const specializationRoute = specialization.toLowerCase().replace(/\s+/g, "-");
+
+    // Map user type to dashboard prefix
+    const dashboardPrefix = {
+      doctor: "doctordashboard",
+      hospital: "hospitaldashboard",
+      freelancer: "freelancerdashboard",
+    }[user?.userType?.toLowerCase()] || "";
+
+    navigate(`/${dashboardPrefix}/specialization`, {
+      state: { specialization, uploadedFiles: [] },
+    });
+  }}
+>
+  Generate Template
+</button>
+
+                  <ModulesMenu user={user} />
+                </>
               )}
               <div className="relative">
                 <button onClick={() => setShowNotifications(!showNotifications)} className="relative group">
