@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+
+
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import axios from "axios";
 import DynamicTable from "../../../../components/microcomponents/DynamicTable";
 import ReusableModal from "../../../../components/microcomponents/Modal";
 import {
@@ -13,7 +16,7 @@ import {
   Thermometer,
 } from "lucide-react";
 
-const MedicalRecords = () => {
+const PatientMedicalRecords = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user); // Fetch user from Redux store
 
@@ -23,127 +26,87 @@ const MedicalRecords = () => {
     hiddenIds: [],
   });
 
-  // Load initial data from localStorage or use default sample data
-  const defaultMedicalData = {
-    OPD: [
-      {
-        id: 1,
-        hospitalName: "SDM Hospital",
-        type: "OPD",
-        diagnosis: "Fever",
-        "K/C/O": "Diabetic",
-        dateOfVisit: "2025-07-01",
-        status: "Treated",
-        patientName: `${user?.firstName || "Guest"} ${user?.lastName || ""}`.trim(),
-        age: user?.age ? `${user.age} years` : "N/A",
-        sex: user?.gender || "Not specified",
-        phone: user?.phone || "Not provided",
-        address: user?.address || "Not provided",
-        isVerified: true,
-        isNewlyAdded: false,
-        vitals: {
-          bloodPressure: "120/80 mmHg",
-          heartRate: "72 bpm",
-          temperature: "98.6°F",
-          spO2: "98%",
-          respiratoryRate: "16 b/m",
-          height: "5'8\"",
-          weight: "70 kg",
-        },
-      },
-      {
-        id: 2,
-        hospitalName: "CityCare Hospital",
-        type: "OPD",
-        diagnosis: "Cough",
-        "K/C/O": "Diabetic",
-        dateOfVisit: "2025-07-02",
-        status: "Active",
-        patientName: `${user?.firstName || "Guest"} ${user?.lastName || ""}`.trim(),
-        age: user?.age ? `${user.age} years` : "N/A",
-        sex: user?.gender || "Not specified",
-        phone: user?.phone || "Not provided",
-        address: user?.address || "Not provided",
-        isVerified: false,
-        isNewlyAdded: false,
-        vitals: {
-          bloodPressure: "110/70 mmHg",
-          heartRate: "68 bpm",
-          temperature: "99.2°F",
-          spO2: "97%",
-          respiratoryRate: "18 b/m",
-          height: "5'4\"",
-          weight: "60 kg",
-        },
-      },
-    ],
-    IPD: [
-      {
-        id: 3,
-        hospitalName: "Apollo Hospital",
-        type: "IPD",
-        diagnosis: "Appendicitis",
-        "K/C/O": "Diabetic",
-        dateOfAdmission: "2025-06-25",
-        dateOfDischarge: "2025-06-30",
-        status: "Discharged",
-        patientName: `${user?.firstName || "Guest"} ${user?.lastName || ""}`.trim(),
-        age: user?.age ? `${user.age} years` : "N/A",
-        sex: user?.gender || "Not specified",
-        phone: user?.phone || "Not provided",
-        address: user?.address || "Not provided",
-        isVerified: true,
-        hasDischargeSummary: true,
-        isNewlyAdded: false,
-        vitals: {
-          bloodPressure: "130/85 mmHg",
-          heartRate: "78 bpm",
-          temperature: "98.4°F",
-          spO2: "99%",
-          respiratoryRate: "14 b/m",
-          height: "6'0\"",
-          weight: "80 kg",
-        },
-      },
-    ],
-    Virtual: [
-      {
-        id: 4,
-        hospitalName: "Apollo Telemedicine",
-        type: "Virtual",
-        diagnosis: "Headache",
-        "K/C/O": "Diabetic",
-        dateOfConsultation: "2025-07-05",
-        status: "Consulted",
-        patientName: `${user?.firstName || "Guest"} ${user?.lastName || ""}`.trim(),
-        age: user?.age ? `${user.age} years` : "N/A",
-        sex: user?.gender || "Not specified",
-        phone: user?.phone || "Not provided",
-        address: user?.address || "Not provided",
-        isVerified: false,
-        isNewlyAdded: false,
-        vitals: {
-          bloodPressure: "115/75 mmHg",
-          heartRate: "70 bpm",
-          temperature: "98.7°F",
-          spO2: "98%",
-          respiratoryRate: "16 b/m",
-          height: "5'6\"",
-          weight: "65 kg",
-        },
-      },
-    ],
-  };
+  // State for medical records
+  const [medicalData, setMedicalData] = useState({
+    OPD: [],
+    IPD: [],
+    Virtual: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
-  const getInitialMedicalData = () => {
-    try {
-      const stored = localStorage.getItem("medicalData");
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return defaultMedicalData;
-  };
+  // Load hidden records from localStorage on component mount
+  useEffect(() => {
+    const savedHiddenIds = localStorage.getItem('patientHiddenRecords');
+    if (savedHiddenIds) {
+      try {
+        const hiddenIds = JSON.parse(savedHiddenIds);
+        setState(prev => ({ ...prev, hiddenIds }));
+      } catch (error) {
+        console.error('Error loading hidden records:', error);
+      }
+    }
+  }, []);
 
-  const [medicalData, setMedicalData] = useState(getInitialMedicalData());
+  // Save hidden records to localStorage whenever hiddenIds changes
+  useEffect(() => {
+    localStorage.setItem('patientHiddenRecords', JSON.stringify(state.hiddenIds));
+  }, [state.hiddenIds]);
+
+  // Fetch medical records filtered by user's phone number using patientPhone field
+  useEffect(() => {
+    const fetchPatientRecords = async () => {
+      setLoading(true);
+      setFetchError(null);
+      
+      // Check if user has phone number
+      if (!user?.phone) {
+        setFetchError("Phone number not found. Please update your profile.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get(
+          "https://6895d385039a1a2b28907a16.mockapi.io/pt-mr/patient-mrec"
+        );
+        
+        // Filter records by comparing user's phone with patientPhone field
+        const userPhone = user.phone;
+        const filteredRecords = response.data.filter(record => {
+          // Compare with patientPhone field (primary) and fallback to phone/phoneNumber
+          return record.patientPhone === userPhone || 
+                 record.phone === userPhone || 
+                 record.phoneNumber === userPhone;
+        });
+        
+        // Separate records by type
+        const opd = [];
+        const ipd = [];
+        const virtual = [];
+        
+        filteredRecords.forEach((rec) => {
+          if (rec.type === "OPD") opd.push(rec);
+          else if (rec.type === "IPD") ipd.push(rec);
+          else if (rec.type === "Virtual") virtual.push(rec);
+        });
+        
+        setMedicalData({ OPD: opd, IPD: ipd, Virtual: virtual });
+        
+        // If no records found for this phone number
+        if (filteredRecords.length === 0) {
+          setFetchError(`No medical records found for phone number: ${userPhone}`);
+        }
+      } catch (err) {
+        console.error("Error fetching medical records:", err);
+        setFetchError("Failed to fetch medical records. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPatientRecords();
+  }, [user?.phone]);
 
   const statusTypes = [
     "Active",
@@ -169,17 +132,37 @@ const MedicalRecords = () => {
     });
   };
 
-  const handleHideRecord = (id) => {
-    updateState({ hiddenIds: [...state.hiddenIds, id] });
+  const handleHideRecord = async (id) => {
+    const newHiddenIds = [...state.hiddenIds, id];
+    updateState({ hiddenIds: newHiddenIds });
+    
+    // Update the record in the API to mark it as hidden by patient
+    try {
+      await axios.put(
+        `https://6895d385039a1a2b28907a16.mockapi.io/pt-mr/patient-mrec/${id}`,
+        { hiddenByPatient: true }
+      );
+    } catch (error) {
+      console.error('Error updating record hide status:', error);
+    }
   };
 
-  const handleUnhideRecord = (id) => {
-    updateState({
-      hiddenIds: state.hiddenIds.filter((hiddenId) => hiddenId !== id),
-    });
+  const handleUnhideRecord = async (id) => {
+    const newHiddenIds = state.hiddenIds.filter((hiddenId) => hiddenId !== id);
+    updateState({ hiddenIds: newHiddenIds });
+    
+    // Update the record in the API to mark it as not hidden by patient
+    try {
+      await axios.put(
+        `https://6895d385039a1a2b28907a16.mockapi.io/pt-mr/patient-mrec/${id}`,
+        { hiddenByPatient: false }
+      );
+    } catch (error) {
+      console.error('Error updating record unhide status:', error);
+    }
   };
 
-  const handleAddRecord = (formData) => {
+  const handleAddRecord = async (formData) => {
     // Ensure type is set for the new record and tab
     const recordType = formData.type || state.activeTab;
     const newRecord = {
@@ -189,14 +172,19 @@ const MedicalRecords = () => {
       patientName: `${user?.firstName || "Guest"} ${user?.lastName || ""}`.trim(),
       age: user?.age ? `${user.age} years` : "N/A",
       sex: user?.gender || "Not specified",
-      phone: user?.phone || "Not provided",
+      patientPhone: user?.phone || "Not provided", // Primary phone field
+      phone: user?.phone || "Not provided", // Backup phone field
+      phoneNumber: user?.phone || "Not provided", // Alternative phone field
+      phoneConsent: formData.phoneConsent || false,
       address: user?.address || "Not provided",
       isVerified: formData.uploadedBy === "Doctor",
       hasDischargeSummary: recordType === "IPD",
       isNewlyAdded: true, // Mark as newly added
+      createdBy: "patient", // Mark as created by patient
+      hiddenByPatient: false, // Initialize as not hidden
       vitals: {
         bloodPressure: "N/A",
-        heartRate: "N/A", 
+        heartRate: "N/A",
         temperature: "N/A",
         spO2: "N/A",
         respiratoryRate: "N/A",
@@ -205,24 +193,41 @@ const MedicalRecords = () => {
       },
     };
 
-    // Add to appropriate tab based on type, show new record at the bottom
-    setMedicalData(prev => {
-      const updated = {
-        ...prev,
-        [recordType]: [
-          ...(Array.isArray(prev[recordType]) ? prev[recordType] : []),
-          newRecord
-        ]
-      };
-      // Save to localStorage
-      try {
-        localStorage.setItem("medicalData", JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    try {
+      // Post to API to save the record
+      const response = await axios.post(
+        "https://6895d385039a1a2b28907a16.mockapi.io/pt-mr/patient-mrec",
+        newRecord
+      );
+      
+      // Update local state with the response data
+      setMedicalData(prev => {
+        const updated = {
+          ...prev,
+          [recordType]: [
+            ...(Array.isArray(prev[recordType]) ? prev[recordType] : []),
+            response.data
+          ]
+        };
+        return updated;
+      });
 
-    updateState({ showAddModal: false });
-    // Do NOT redirect here. Only show in table.
+      updateState({ showAddModal: false });
+    } catch (error) {
+      console.error("Error adding record:", error);
+      // Fallback to local storage if API fails
+      setMedicalData(prev => {
+        const updated = {
+          ...prev,
+          [recordType]: [
+            ...(Array.isArray(prev[recordType]) ? prev[recordType] : []),
+            newRecord
+          ]
+        };
+        return updated;
+      });
+      updateState({ showAddModal: false });
+    }
   };
 
   const createColumns = (type) => {
@@ -268,9 +273,16 @@ const MedicalRecords = () => {
           if (key === "hospitalName") {
             return (
               <div className={`flex items-center gap-2 ${hiddenClass}`}>
-                {(row.isVerified || row.hasDischargeSummary) && (
+                {/* Only show one green checkmark: isVerified/hasDischargeSummary takes priority, else phoneConsent+doctor */}
+                {(row.isVerified || row.hasDischargeSummary) ? (
                   <CheckCircle size={16} className="text-green-600" />
-                )}
+                ) : (row.phoneConsent && row.createdBy === "doctor") ? (
+                  <CheckCircle 
+                    size={16} 
+                    className="text-green-600" 
+                    title="Phone consent given by doctor" 
+                  />
+                ) : null}
                 <button
                   type="button"
                   className="text-[var(--primary-color)] underline hover:text-[var(--accent-color)] font-semibold"
@@ -306,36 +318,36 @@ const MedicalRecords = () => {
           );
         },
       })),
-     {
-  header: "Actions",
-  accessor: "actions",
-  cell: (row) => (
-    <div className="flex gap-2">
-      <button
-        onClick={() =>
-          row.isHidden
-            ? handleUnhideRecord(row.id)
-            : handleHideRecord(row.id)
-        }
-        className={`transition-colors ${
-          row.isHidden
-            ? "text-green-500 hover:text-green-700"
-            : "text-gray-500 hover:text-red-500"
-        }`}
-        title={row.isHidden ? "Unhide Record" : "Hide Record"}
-        type="button"
-      >
-        <EyeOff size={16} />
-      </button>
-    </div>
-  ),
-},
+      {
+        header: "Actions",
+        accessor: "actions",
+        cell: (row) => (
+          <div className="flex gap-2">
+            <button
+              onClick={() =>
+                row.isHidden
+                  ? handleUnhideRecord(row.id)
+                  : handleHideRecord(row.id)
+              }
+              className={`transition-colors ${
+                row.isHidden
+                  ? "text-green-500 hover:text-green-700"
+                  : "text-gray-500 hover:text-red-500"
+              }`}
+              title={row.isHidden ? "Unhide Record" : "Hide Record"}
+              type="button"
+            >
+              <EyeOff size={16} />
+            </button>
+          </div>
+        ),
+      },
     ];
   };
 
+  // Filter records for the current tab, and add chiefComplaint fallback
   const getCurrentTabData = () =>
-    medicalData[state.activeTab].map((record) => {
-      // If chiefComplaint is missing, use diagnosis value
+    (medicalData[state.activeTab] || []).map((record) => {
       const chiefComplaint = record.chiefComplaint || record.diagnosis || "";
       return {
         ...record,
@@ -345,11 +357,10 @@ const MedicalRecords = () => {
     });
 
   const getFormFields = (recordType) => [
-    { 
-      name: "hospitalName", 
-      label: "Hospital Name", 
-      type: "select", 
-      
+    {
+      name: "hospitalName",
+      label: "Hospital Name",
+      type: "select",
       options: [
         { label: "AIIMS Delhi", value: "AIIMS Delhi" },
         { label: "Fortis Hospital, Gurgaon", value: "Fortis Hospital, Gurgaon" },
@@ -386,7 +397,7 @@ const MedicalRecords = () => {
     { name: "chiefComplaint", label: "Chief Complaint", type: "text" },
     {
       name: "conditions",
-      label: "K/C/O",
+      label: "Medical Conditions",
       type: "multiselect",
       options: medicalConditions,
     },
@@ -410,6 +421,7 @@ const MedicalRecords = () => {
         },
       ],
     }[recordType] || []),
+   
   ];
 
   const tabs = Object.keys(medicalData).map((key) => ({
@@ -417,16 +429,17 @@ const MedicalRecords = () => {
     value: key,
   }));
 
+  // Filter options based on current user's records only
   const filters = [
     {
       key: "hospitalName",
       label: "Hospital",
-      options: Object.values(medicalData).flatMap((records) =>
-        records.map((record) => ({
-          value: record.hospitalName,
-          label: record.hospitalName,
-        }))
-      ),
+      options: [...new Set(Object.values(medicalData).flatMap((records) =>
+        records.map((record) => record.hospitalName)
+      ))].map(hospital => ({
+        value: hospital,
+        label: hospital,
+      })),
     },
     {
       key: "status",
@@ -440,16 +453,30 @@ const MedicalRecords = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Search size={24} className="text-[var(--primary-color)]" />
-          <h2 className="h4-heading">Medical Records History</h2>
+          <div>
+            <h2 className="h4-heading">Medical Records History</h2>
+          </div>
         </div>
         <button
           onClick={() => updateState({ showAddModal: true })}
           className="btn btn-primary"
+          disabled={!user?.phone}
+          title={!user?.phone ? "Please update your phone number in profile" : "Add Record"}
         >
-          <Plus size={18} /> Add Record
+          <Plus size={18} />
+          Add Record
         </button>
       </div>
 
+      {loading ? (
+        <div className="text-center py-8">Loading medical records...</div>
+      ) : fetchError ? (
+        <div className="text-center text-red-600 ">
+          
+        </div>
+      ) : null}
+
+      {/* Always show tabs and Add Record button, even if no data */}
       <DynamicTable
         columns={createColumns(state.activeTab)}
         data={getCurrentTabData()}
@@ -458,6 +485,21 @@ const MedicalRecords = () => {
         activeTab={state.activeTab}
         onTabChange={(tab) => updateState({ activeTab: tab })}
       />
+
+      {/* Show empty state if no records for current tab and not loading or error */}
+      {!loading && !fetchError && getCurrentTabData().length === 0 && (
+        <div className="text-center py-8 text-gray-600">
+          <div className="flex flex-col items-center gap-4">
+            <CheckCircle size={48} className="text-gray-400" />
+            <div>
+              <h3 className="text-lg font-semibold mb-2">No Records Found</h3>
+              <p className="text-sm">
+                You have no medical records in this category. Click "Add Record" to create one.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Record Modal */}
       <ReusableModal
@@ -473,4 +515,4 @@ const MedicalRecords = () => {
   );
 };
 
-export default MedicalRecords;
+export default PatientMedicalRecords;

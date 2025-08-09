@@ -43,6 +43,7 @@ import TokenDisplay from "./components/Token-Display";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InitialAssessmentForm from "./components/InitialAssesment";
+// import PaymentGatewayPage from "./components/microcomponents/PaymentGatway";
 
 // ---------------------- Helpers ----------------------
 
@@ -162,6 +163,8 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/healthcard" element={<Healthcard />} />
         <Route path="/bookconsultation" element={<BookApp />} />
+         {/* <Route path="/paymentgateway" element={<PaymentGatewayPage />} /> */}
+
 
         {/* ✅ Redirect Based on Role */}
         <Route path="/redirect" element={<RoleRedirect />} />

@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { registerUser, sendOTP } from "../context-api/authSlice";
 import { Eye, EyeOff, Upload, FileText, X, Camera, ChevronDown } from 'lucide-react';
 
-// File Upload Component with Blob Handling
+// File Upload Component with Base64 Handling
 const NeatFileUpload = ({ name, accept, multiple = false, files, onFileChange, label, required = false, icon: Icon = Upload }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
@@ -56,9 +56,9 @@ const NeatFileUpload = ({ name, accept, multiple = false, files, onFileChange, l
             </button>
             <h2 className="text-lg font-semibold mb-4">Preview</h2>
             {previewDoc.type?.startsWith("image/") ? (
-              <img src={URL.createObjectURL(previewDoc)} alt="Preview" className="max-h-[500px] w-full object-contain" />
+              <img src={previewDoc.base64 || previewDoc} alt="Preview" className="max-h-[500px] w-full object-contain" />
             ) : previewDoc.type === "application/pdf" ? (
-              <iframe src={URL.createObjectURL(previewDoc)} className="w-full h-[500px]" title="PDF Preview" />
+              <iframe src={previewDoc.base64 || previewDoc} className="w-full h-[500px]" title="PDF Preview" />
             ) : (
               <p className="text-gray-600">Preview not available for this file type.</p>
             )}
@@ -69,7 +69,7 @@ const NeatFileUpload = ({ name, accept, multiple = false, files, onFileChange, l
   );
 };
 
-// Photo Upload Component with Blob Handling
+// Photo Upload Component with Base64 Handling
 const PhotoUpload = ({ photoPreview, onPhotoChange, onPreviewClick }) => (
   <div className="relative floating-input" data-placeholder="Upload Photo *">
     <label className="block relative cursor-pointer">
@@ -87,11 +87,7 @@ const PhotoUpload = ({ photoPreview, onPhotoChange, onPreviewClick }) => (
     </label>
     {photoPreview && (
       <div className="mt-2 flex items-center gap-2">
-        {/* Only show file name and eye icon for preview */}
-        <span className="text-sm text-gray-700">
-          {/* Try to get file name from photoPreview (dataURL) or fallback */}
-          {typeof photoPreview === 'string' ? 'Photo Uploaded' : (photoPreview?.name || 'Photo Uploaded')}
-        </span>
+        <span className="text-sm text-gray-700">Photo Uploaded</span>
         <button type="button" onClick={onPreviewClick} className="text-blue-500 hover:text-blue-700">
           <Eye size={20} />
         </button>
@@ -193,6 +189,8 @@ const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [availableCities, setAvailableCities] = useState([]);
+  const [isLoadingCities, setIsLoadingCities] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -207,7 +205,7 @@ const RegisterForm = () => {
     temporaryAddress: '',
     permanentAddress: '',
     isSameAsPermanent: false,
-    photo: null,
+    photo: null, // This will store base64 data
     password: '',
     confirmPassword: '',
     agreeDeclaration: false,
@@ -222,7 +220,7 @@ const RegisterForm = () => {
     location: '',
     hospitalType: [],
     gstNumber: '',
-    nabhCertificate: null,
+    nabhCertificate: null, // This will store base64 data
     inHouseLab: '',
     inHousePharmacy: '',
     labLicenseNo: '',
@@ -236,11 +234,11 @@ const RegisterForm = () => {
     scanServices: [],
     specialServices: [],
     licenseNumber: '',
-    certificates: [],
+    certificates: [], // These will store base64 data
     certificateTypes: [],
     otherCertificate: '',
     otherSpecialService: '',
-    documents: [],
+    documents: [], // These will store base64 data
     // Doctor specific
     roleSpecificData: {
       registrationNumber: '',
@@ -265,21 +263,20 @@ const RegisterForm = () => {
     Dermatology: ["Allopathy"], Gynecology: ["Allopathy"], ENT: ["Allopathy"], Ophthalmology: ["Allopathy"], Radiology: ["Allopathy"]
   };
 
-  // Convert File to Blob
-  const fileToBlob = async (file) => {
-    return new Promise((resolve) => {
+  // Convert File to Base64
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
-        const arrayBuffer = reader.result;
-        const blob = new Blob([arrayBuffer], { type: file.type });
         resolve({
-          blob,
+          base64: reader.result,
           name: file.name,
           type: file.type,
           size: file.size
         });
       };
-      reader.readAsArrayBuffer(file);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
     });
   };
 
@@ -330,31 +327,59 @@ const RegisterForm = () => {
 
   const handleFileChange = async (e) => {
     const { name, files } = e.target;
-    
+
     if (name === "photo" && files.length > 0) {
       const file = files[0];
       if (file.type.startsWith("image/")) {
-        const blobData = await fileToBlob(file);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setPhotoPreview(e.target.result);
-        };
-        reader.readAsDataURL(file);
-        setFormData(prev => ({ ...prev, photo: blobData }));
+        try {
+          const base64Data = await fileToBase64(file);
+          setPhotoPreview(base64Data.base64);
+          setFormData(prev => ({ ...prev, photo: base64Data.base64 }));
+        } catch (error) {
+          console.error("Error converting photo to base64:", error);
+          alert("Error processing image. Please try again.");
+        }
       } else {
         alert("Please upload a valid image file.");
       }
     } else if (name === "nabhCertificate" && files.length > 0) {
       const file = files[0];
-      const blobData = await fileToBlob(file);
-      setFormData(prev => ({ ...prev, nabhCertificate: blobData }));
+      try {
+        const base64Data = await fileToBase64(file);
+        setFormData(prev => ({ 
+          ...prev, 
+          nabhCertificate: [{
+            ...base64Data,
+            originalName: file.name
+          }]
+        }));
+      } catch (error) {
+        console.error("Error converting certificate to base64:", error);
+        alert("Error processing file. Please try again.");
+      }
     } else if (name === "certificates" && files.length > 0) {
       const validFiles = Array.from(files).filter(
         file => file.type === "application/pdf" || file.type.startsWith("image/")
       );
       if (validFiles.length > 0) {
-        const blobFiles = await Promise.all(validFiles.map(fileToBlob));
-        setFormData(prev => ({ ...prev, certificates: [...(prev.certificates || []), ...blobFiles] }));
+        try {
+          const base64Files = await Promise.all(
+            validFiles.map(async (file) => {
+              const base64Data = await fileToBase64(file);
+              return {
+                ...base64Data,
+                originalName: file.name
+              };
+            })
+          );
+          setFormData(prev => ({ 
+            ...prev, 
+            certificates: [...(prev.certificates || []), ...base64Files] 
+          }));
+        } catch (error) {
+          console.error("Error converting certificates to base64:", error);
+          alert("Error processing files. Please try again.");
+        }
       } else {
         alert("Only PDF or image files are allowed.");
       }
@@ -363,8 +388,24 @@ const RegisterForm = () => {
         file => file.type === "application/pdf" || file.type.startsWith("image/")
       );
       if (validFiles.length > 0) {
-        const blobFiles = await Promise.all(validFiles.map(fileToBlob));
-        setFormData(prev => ({ ...prev, documents: [...(prev.documents || []), ...blobFiles] }));
+        try {
+          const base64Files = await Promise.all(
+            validFiles.map(async (file) => {
+              const base64Data = await fileToBase64(file);
+              return {
+                ...base64Data,
+                originalName: file.name
+              };
+            })
+          );
+          setFormData(prev => ({ 
+            ...prev, 
+            documents: [...(prev.documents || []), ...base64Files] 
+          }));
+        } catch (error) {
+          console.error("Error converting documents to base64:", error);
+          alert("Error processing files. Please try again.");
+        }
       } else {
         alert("Only PDF or image files are allowed.");
       }
@@ -374,24 +415,36 @@ const RegisterForm = () => {
   const handlePincodeChange = async (e) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 6);
     setFormData(prev => ({ ...prev, pincode: value }));
+    
     if (value.length === 6) {
+      setIsLoadingCities(true);
       try {
         const res = await fetch(`https://api.postalpincode.in/pincode/${value}`);
         const data = await res.json();
         if (data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+          // Extract unique cities from the response
+          const cities = [...new Set(data[0].PostOffice.map(office => office.Name))];
+          setAvailableCities(cities);
+          
+          // Set district and state from first office (they should be same for all)
           setFormData(prev => ({
             ...prev,
-            city: data[0].PostOffice[0].Name,
+            city: '', // Reset city selection
             district: data[0].PostOffice[0].District,
             state: data[0].PostOffice[0].State
           }));
         } else {
+          setAvailableCities([]);
           setFormData(prev => ({ ...prev, city: '', district: '', state: '' }));
         }
       } catch {
+        setAvailableCities([]);
         setFormData(prev => ({ ...prev, city: '', district: '', state: '' }));
+      } finally {
+        setIsLoadingCities(false);
       }
     } else {
+      setAvailableCities([]);
       setFormData(prev => ({ ...prev, city: '', district: '', state: '' }));
     }
   };
@@ -414,6 +467,7 @@ const RegisterForm = () => {
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
+    if (!formData.city?.trim()) newErrors.city = "City is required";
 
     if (userType === "patient") {
       if (!formData.aadhaar || formData.aadhaar.replace(/-/g, '').length !== 12) newErrors.aadhaar = "Aadhaar must be 12 digits";
@@ -479,6 +533,8 @@ const RegisterForm = () => {
     setIsSubmitting(true);
     try {
       const dataToSubmit = { ...formData, userType };
+      console.log("Submitting data with base64 images:", dataToSubmit);
+      
       const resultAction = await dispatch(registerUser(dataToSubmit));
       if (registerUser.fulfilled.match(resultAction)) {
         if (userType === "patient" && !isOTPSent) {
@@ -518,8 +574,8 @@ const RegisterForm = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Please select a user type first</h2>
-          <button 
-            onClick={() => navigate("/register-select")} 
+          <button
+            onClick={() => navigate("/register-select")}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
             Go Back to Selection
@@ -593,14 +649,14 @@ const RegisterForm = () => {
             otherValue={formData.otherHospitalType}
             onOtherChange={(value) => setFormData(prev => ({ ...prev, otherHospitalType: value }))}
           />
-             <NeatFileUpload
-          name="nabhCertificate"
-          accept=".pdf,.jpg,.jpeg,.png"
-          files={formData.nabhCertificate ? [formData.nabhCertificate] : []}
-          onFileChange={handleFileChange}
-          label="NABH Certificate"
-          icon={FileText}
-        />
+          <NeatFileUpload
+            name="nabhCertificate"
+            accept=".pdf,.jpg,.jpeg,.png"
+            files={formData.nabhCertificate || []}
+            onFileChange={handleFileChange}
+            label="NABH Certificate"
+            icon={FileText}
+          />
         </div>
         {errors.hospitalType && <p className="error-text">{errors.hospitalType}</p>}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -671,7 +727,6 @@ const RegisterForm = () => {
             {errors.inHousePharmacy && <p className="error-text">{errors.inHousePharmacy}</p>}
           </div>
         </div>
-     
       </>
     );
   } else if (userType === "lab") {
@@ -871,14 +926,32 @@ const RegisterForm = () => {
               />
               {errors.pincode && <p className="error-text">{errors.pincode}</p>}
             </div>
-            <div className="floating-input relative w-full" data-placeholder="City">
-              <input
+            <div className="floating-input relative w-full" data-placeholder="City *">
+              <select
                 name="city"
-                type="text"
                 value={formData.city || ""}
-                readOnly
-                className="input-field peer bg-gray-100 cursor-not-allowed"
-              />
+                onChange={handleInputChange}
+                disabled={!availableCities.length || isLoadingCities}
+                className={`input-field peer ${errors.city ? "input-error" : ""} ${
+                  !availableCities.length ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
+                required
+              >
+                <option value="">
+                  {isLoadingCities 
+                    ? "Loading cities..." 
+                    : availableCities.length 
+                      ? "Select City" 
+                      : "Enter pincode first"
+                  }
+                </option>
+                {availableCities.map((city, index) => (
+                  <option key={index} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+              {errors.city && <p className="error-text">{errors.city}</p>}
             </div>
             <div className="floating-input relative w-full" data-placeholder="District">
               <input
@@ -985,7 +1058,7 @@ const RegisterForm = () => {
           <div className="text-center mt-4 text-blue-900">
             <p>
               Already have an account?{" "}
-               <button
+              <button
                 type="button"
                 onClick={() => navigate("/login")}
                 className="font-semibold hover:opacity-80 transition-opacity"

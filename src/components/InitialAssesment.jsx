@@ -2,9 +2,9 @@ import React, { useState, useRef } from 'react';
 import { 
   Calendar, User, Phone, MapPin, FileText, Heart, Brain, Baby, 
   Bone, Eye, Stethoscope, Save, Printer as Print, Download, 
-  Leaf, FlaskConical, Activity, Users, PenTool, Trash2
+  Leaf, FlaskConical, Activity, Users, PenTool, Trash2, ChevronDown, ChevronUp
 } from 'lucide-react';
-import SignatureCanvas from 'react-signature-canvas';
+import ImageAnnotationCanvas from './microcomponents/ImageAnnotationCanvas';
 
 const specialtyTemplates = {
   // AYUSH Specializations
@@ -156,6 +156,8 @@ const MedicalAssessmentForm = () => {
   const [selectedSpecialty, setSelectedSpecialty] = useState('ayurveda');
   const [formData, setFormData] = useState({});
   const [handwrittenNotes, setHandwrittenNotes] = useState('');
+  const [annotatedImages, setAnnotatedImages] = useState([]);
+  const [showImageAnnotation, setShowImageAnnotation] = useState(false);
   const [patientInfo, setPatientInfo] = useState({
     patientId: '',
     name: '',
@@ -177,7 +179,6 @@ const MedicalAssessmentForm = () => {
     bmi: ''
   });
 
-  const signatureRef = useRef(null);
   const template = specialtyTemplates[selectedSpecialty];
   const IconComponent = template.icon;
 
@@ -196,8 +197,13 @@ const MedicalAssessmentForm = () => {
     }));
   };
 
-  const clearSignature = () => {
-    signatureRef.current?.clear();
+  const handleImageAnnotated = (imageData) => {
+    setAnnotatedImages(prev => [...prev, {
+      id: Date.now(),
+      data: imageData,
+      timestamp: new Date().toISOString(),
+      specialty: selectedSpecialty
+    }]);
   };
 
   const renderFormSection = (section) => {
@@ -209,7 +215,7 @@ const MedicalAssessmentForm = () => {
               {section.label} {section.required && <span className="text-red-500">*</span>}
             </label>
             <textarea
-              className="input-field min-h-[80px]"
+              className="input-field min-h-[80px] resize-none focus:border-[var(--primary-color)] transition-all duration-200"
               placeholder={`Enter ${section.label.toLowerCase()}`}
               value={formData[section.id] || ''}
               onChange={(e) => handleInputChange(section.id, e.target.value)}
@@ -226,7 +232,7 @@ const MedicalAssessmentForm = () => {
             </label>
             <div className="grid grid-cols-2 gap-2">
               {section.options.map((option) => (
-                <label key={option} className="flex items-center p-2 bg-gray-50 rounded hover:bg-gray-100 transition-all cursor-pointer border">
+                <label key={option} className="flex items-center p-2 bg-gray-50 rounded hover:bg-gray-100 transition-all cursor-pointer border hover:border-[var(--accent-color)]">
                   <input
                     type="checkbox"
                     className="mr-2 w-4 h-4 text-[var(--accent-color)] bg-gray-100 border-gray-300 rounded focus:ring-[var(--accent-color)]"
@@ -254,7 +260,7 @@ const MedicalAssessmentForm = () => {
             </label>
             <div className="space-y-1">
               {section.options.map((option) => (
-                <label key={option} className="flex items-center p-2 bg-gray-50 rounded hover:bg-gray-100 transition-all cursor-pointer border">
+                <label key={option} className="flex items-center p-2 bg-gray-50 rounded hover:bg-gray-100 transition-all cursor-pointer border hover:border-[var(--accent-color)]">
                   <input
                     type="radio"
                     name={section.id}
@@ -306,7 +312,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Height (cm)</label>
                 <input
                   type="number"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="Height"
                   onChange={(e) => handleInputChange('height', e.target.value)}
                 />
@@ -315,7 +321,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Weight (kg)</label>
                 <input
                   type="number"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="Weight"
                   onChange={(e) => handleInputChange('weight', e.target.value)}
                 />
@@ -324,7 +330,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Head Circumference (cm)</label>
                 <input
                   type="number"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="Head Circ."
                   onChange={(e) => handleInputChange('headCircumference', e.target.value)}
                 />
@@ -333,7 +339,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Percentile</label>
                 <input
                   type="text"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="Percentile"
                   onChange={(e) => handleInputChange('percentile', e.target.value)}
                 />
@@ -353,7 +359,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Right Eye</label>
                 <input
                   type="text"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="e.g., 20/20"
                   onChange={(e) => handleInputChange('rightEye', e.target.value)}
                 />
@@ -362,7 +368,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Left Eye</label>
                 <input
                   type="text"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="e.g., 20/20"
                   onChange={(e) => handleInputChange('leftEye', e.target.value)}
                 />
@@ -378,23 +384,492 @@ const MedicalAssessmentForm = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Form submitted:', { patientInfo, vitals, formData, handwrittenNotes });
+    console.log('Form submitted:', { patientInfo, vitals, formData, handwrittenNotes, annotatedImages });
     alert('Assessment form submitted successfully!');
   };
 
   const handlePrint = () => {
-    window.print();
+    generatePrintTemplate();
+  };
+
+  const generatePrintTemplate = () => {
+    const printContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${template.title} - ${patientInfo.name || 'Patient'}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+            padding: 20px;
+            font-size: 14px;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #01D48C;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .hospital-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #01D48C;
+            margin-bottom: 5px;
+        }
+        
+        .form-title {
+            font-size: 20px;
+            color: #0E1630;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .form-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #f3f4f6;
+            padding: 12px 15px;
+            font-weight: bold;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .section-content {
+            padding: 15px;
+        }
+        
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .field {
+            margin-bottom: 10px;
+        }
+        
+        .field-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        
+        .field-value {
+            border: 1px solid #d1d5db;
+            padding: 8px 10px;
+            border-radius: 4px;
+            background: #f9fafb;
+            min-height: 35px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .field-value.large {
+            min-height: 80px;
+            align-items: flex-start;
+            padding-top: 10px;
+        }
+        
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            background: #f9fafb;
+        }
+        
+        .checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #d1d5db;
+            margin-right: 8px;
+            border-radius: 3px;
+            position: relative;
+        }
+        
+        .checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 2px;
+            color: #059669;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .radio-item {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            background: #f9fafb;
+        }
+        
+        .radio {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #d1d5db;
+            border-radius: 50%;
+            margin-right: 8px;
+            position: relative;
+        }
+        
+        .radio.selected::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 8px;
+            height: 8px;
+            background: #059669;
+            border-radius: 50%;
+        }
+        
+        .pain-scale {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+        }
+        
+        .pain-number {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #d1d5db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .pain-number.selected {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+        
+        .notes-section {
+            background: #f9fafb;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            line-height: 1.8;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            border-top: 2px solid #01D48C;
+            padding-top: 20px;
+            text-align: center;
+        }
+        
+        .footer-title {
+            font-weight: bold;
+            color: #01D48C;
+            margin-bottom: 10px;
+        }
+        
+        .footer-info {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.4;
+        }
+        
+        .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .signature-box {
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-bottom: 1px solid #374151;
+            height: 40px;
+            margin-bottom: 10px;
+        }
+        
+        @media print {
+            body { padding: 0; }
+            .section { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="hospital-name">AVSwasthya Hospital System</div>
+        <div class="form-title">${template.title}</div>
+        <div class="form-meta">
+            <span>Date: ${new Date().toLocaleDateString()}</span>
+            <span>Form ID: MED-${Date.now()}</span>
+            <span>Time: ${new Date().toLocaleTimeString()}</span>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">Patient Information</div>
+        <div class="section-content">
+            <div class="field-grid">
+                <div class="field">
+                    <div class="field-label">Patient ID</div>
+                    <div class="field-value">${patientInfo.patientId || ''}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Full Name</div>
+                    <div class="field-value">${patientInfo.name || ''}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Age</div>
+                    <div class="field-value">${patientInfo.age || ''}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Gender</div>
+                    <div class="field-value">${patientInfo.gender || ''}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Contact Number</div>
+                    <div class="field-value">${patientInfo.contact || ''}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Consulting Doctor</div>
+                    <div class="field-value">${patientInfo.consultingDoctor || ''}</div>
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-label">Address</div>
+                <div class="field-value large">${patientInfo.address || ''}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">Vital Signs</div>
+        <div class="section-content">
+            <div class="field-grid">
+                <div class="field">
+                    <div class="field-label">Temperature (°F)</div>
+                    <div class="field-value">${vitals.temperature || ''}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Pulse (BPM)</div>
+                    <div class="field-value">${vitals.pulse || ''}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Blood Pressure</div>
+                    <div class="field-value">${vitals.bp || ''}</div>
+                </div>
+                <div class="field">
+                    <div class="field-label">SpO2 (%)</div>
+                    <div class="field-value">${vitals.spo2 || ''}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    ${template.sections.map(section => {
+      const sectionData = formData[section.id];
+      
+      return `
+        <div class="section">
+            <div class="section-header">${section.label}</div>
+            <div class="section-content">
+                ${renderPrintSection(section, sectionData)}
+            </div>
+        </div>
+      `;
+    }).join('')}
+
+    <div class="section">
+        <div class="section-header">Clinical Notes & Observations</div>
+        <div class="section-content">
+            <div class="notes-section">${handwrittenNotes || 'No additional notes provided.'}</div>
+        </div>
+    </div>
+
+    <div class="signature-section">
+        <div class="signature-box">
+            
+        </div>
+        <div class="signature-box">
+            <div class="signature-line"></div>
+            <div>Doctor Signature</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-title">
+            ${selectedCategory === 'AYUSH' ? 'AYUSH Department' : 'Allopathy Department'} - ${template.title.replace(' Assessment', '')} Excellence
+        </div>
+        <div class="footer-info">
+            © 2025 AVSwasthya Hospital System. All rights reserved. | Confidential Medical Document<br>
+            This form contains confidential patient information and should be handled according to HIPAA guidelines.<br>
+            Emergency: +91-XXXX-XXXX | Email: info@avswasthya.com | Website: www.avswasthya.com
+        </div>
+    </div>
+</body>
+</html>`;
+
+    // Create a new window with the print content
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  };
+
+  const renderPrintSection = (section, sectionData) => {
+    switch (section.type) {
+      case 'textarea':
+        return `<div class="field-value large">${sectionData || ''}</div>`;
+      
+      case 'checklist':
+        return `
+          <div class="checkbox-grid">
+            ${section.options.map(option => `
+              <div class="checkbox-item">
+                <div class="checkbox ${(sectionData && sectionData.includes(option)) ? 'checked' : ''}"></div>
+                <span>${option}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+      case 'radio':
+        return `
+          <div class="radio-group">
+            ${section.options.map(option => `
+              <div class="radio-item">
+                <div class="radio ${sectionData === option ? 'selected' : ''}"></div>
+                <span>${option}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+      case 'pain-scale':
+        return `
+          <div class="pain-scale">
+            <span style="font-size: 12px; color: #666;">No Pain</span>
+            ${[...Array(11)].map((_, i) => `
+              <div class="pain-number ${sectionData === i ? 'selected' : ''}">${i}</div>
+            `).join('')}
+            <span style="font-size: 12px; color: #666;">Severe</span>
+          </div>
+        `;
+
+      case 'vitals-pediatric':
+        return `
+          <div class="field-grid">
+            <div class="field">
+              <div class="field-label">Height (cm)</div>
+              <div class="field-value">${formData.height || ''}</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Weight (kg)</div>
+              <div class="field-value">${formData.weight || ''}</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Head Circumference (cm)</div>
+              <div class="field-value">${formData.headCircumference || ''}</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Percentile</div>
+              <div class="field-value">${formData.percentile || ''}</div>
+            </div>
+          </div>
+        `;
+
+      case 'vision-test':
+        return `
+          <div class="field-grid">
+            <div class="field">
+              <div class="field-label">Right Eye</div>
+              <div class="field-value">${formData.rightEye || ''}</div>
+            </div>
+            <div class="field">
+              <div class="field-label">Left Eye</div>
+              <div class="field-value">${formData.leftEye || ''}</div>
+            </div>
+          </div>
+        `;
+
+      default:
+        return `<div class="field-value">${sectionData || ''}</div>`;
+    }
   };
 
   const filteredSpecialties = Object.entries(specialtyTemplates).filter(
     ([key, spec]) => spec.category === selectedCategory
   );
 
+  // For dropdown options
+  const categoryOptions = [
+    { value: 'Allopathy', label: 'Allopathy (Modern Medicine)' },
+    { value: 'AYUSH', label: 'AYUSH (Traditional Medicine)' },
+  ];
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-[var(--primary-color)] text-white shadow-lg print:hidden">
-        <div className="max-w-5xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="p-2 bg-[var(--accent-color)] rounded-full">
@@ -416,7 +891,7 @@ const MedicalAssessmentForm = () => {
       {/* Print Header - Only visible when printing */}
       <div className="hidden print:block">
         <div className="text-center border-b-2 border-[var(--primary-color)] pb-4 mb-6">
-          <h1 className="text-2xl font-bold text-[var(--primary-color)]">AVSwasthya Hospital System</h1>
+          <h1 className="h2-heading">AVSwasthya Hospital System</h1>
           <p className="text-lg font-semibold text-[var(--accent-color)] mt-1">{template.title}</p>
           <div className="flex justify-between mt-3 text-sm">
             <span>Date: {new Date().toLocaleDateString()}</span>
@@ -427,71 +902,81 @@ const MedicalAssessmentForm = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          
-          {/* Category & Specialty Selector */}
-          <div className="bg-white rounded-lg shadow-sm border p-4 print:hidden">
+          {/* Category & Specialty Selector - Modern Card UI */}
+          <div className="print:hidden rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
             <h2 className="h3-heading mb-4">Select Medical System & Specialty</h2>
-            
-            {/* Category Selection */}
-            <div className="mb-4">
-              <h3 className="text-base font-semibold mb-3">Medical System</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {['AYUSH', 'Allopathy'].map((category) => (
-                  <button
-                    key={category}
-                    type="button"
-                    className={`p-3 rounded-lg border-2 transition-all duration-300 ${
-                      selectedCategory === category 
-                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--primary-color)]' 
-                        : 'border-gray-200 hover:border-[var(--accent-color)]/50'
-                    }`}
-                    onClick={() => handleCategoryChange(category)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Medical System Dropdown */}
+              <div>
+                <label className="block text-base font-semibold mb-2 text-gray-700">Medical System</label>
+                <div className="relative group">
+                  <select
+                    className="w-full py-3 px-4 pr-10 rounded-lg border-2 border-[var(--accent-color)] focus:border-[var(--accent-color)] focus:ring-0 ring-0 outline-none text-[var(--accent-color)] shadow transition-all duration-200 appearance-none font-semibold hover:border-[var(--accent-color)] cursor-pointer"
+                    value={selectedCategory}
+                    onChange={e => handleCategoryChange(e.target.value)}
                   >
-                    <div className="text-center">
-                      <h4 className="font-semibold">{category}</h4>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {category === 'AYUSH' ? 'Traditional Medicine' : 'Modern Medicine'}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                    {categoryOptions.map(opt => (
+                      <option key={opt.value} value={opt.value} className="font-semibold text-gray-900 bg-white text-[var(--accent-color)]">
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--accent-color)]  group-focus-within:text-white">
+                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                </div>
               </div>
-            </div>
-
-            {/* Specialty Selection */}
-            <div>
-              <h3 className="text-base font-semibold mb-3">Specialty</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredSpecialties.map(([key, spec]) => {
-                  const SpecIcon = spec.icon;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      className={`p-3 rounded-lg border-2 transition-all duration-300 ${
-                        selectedSpecialty === key 
-                          ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10 text-[var(--primary-color)]' 
-                          : 'border-gray-200 hover:border-[var(--accent-color)]/50'
-                      }`}
-                      onClick={() => setSelectedSpecialty(key)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <SpecIcon size={18} className="text-[var(--accent-color)]" />
-                        <div className="text-left">
-                          <h4 className="font-semibold text-sm">{spec.title.replace(' Assessment', '')}</h4>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+              {/* Specialty Dropdown */}
+              <div>
+                <label className="block text-base font-semibold mb-2 text-gray-700">Specialty</label>
+                <div className="relative group">
+                  <select
+                    className="w-full py-3 px-4 pr-10 rounded-lg border-2 border-[var(--accent-color)] focus:border-[var(--accent-color)] focus:ring-0 ring-0 outline-none text-[var(--accent-color)] shadow transition-all duration-200 appearance-none font-semibold hover:border-[var(--accent-color)] cursor-pointer"
+                    value={selectedSpecialty}
+                    onChange={e => setSelectedSpecialty(e.target.value)}
+                  >
+                    {filteredSpecialties.map(([key, spec]) => (
+                      <option key={key} value={key} className="font-semibold text-gray-900 bg-white text-[var(--accent-color)]">
+                        {spec.title.replace(' Assessment', '')}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--accent-color)]  group-focus-within:text-white">
+                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
+          
+          {/* Medical Image Upload & Annotation Section (Collapsible) */}
+          <div className="print:hidden rounded-xl shadow-lg bg-white mb-6 border border-gray-100">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-6 py-4 focus:outline-none group"
+              onClick={() => setShowImageAnnotation((prev) => !prev)}
+            >
+              <span className="text-lg font-semibold text-gray-800 flex items-center">
+                <Download className="mr-2 text-[var(--accent-color)]" size={20} />
+                Upload Your Template
+              </span>
+              {showImageAnnotation ? (
+                <ChevronUp size={22} className="text-gray-400 group-hover:text-[var(--accent-color)] transition-all" />
+              ) : (
+                <ChevronDown size={22} className="text-gray-400 group-hover:text-[var(--accent-color)] transition-all" />
+              )}
+            </button>
+            {showImageAnnotation && (
+              <div className="px-6 pb-6">
+                <ImageAnnotationCanvas onImageChange={handleImageAnnotated} />
+              </div>
+            )}
+          </div>
 
           {/* Patient Information */}
-          <div className="bg-white rounded-lg shadow-sm border p-4">
+          <div className="rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
             <h2 className="h3-heading mb-4 flex items-center">
               <User className="mr-2 text-[var(--accent-color)]" size={20} />
               Patient Information
@@ -501,7 +986,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Patient ID</label>
                 <input
                   type="text"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="Enter Patient ID"
                   value={patientInfo.patientId}
                   onChange={(e) => setPatientInfo({...patientInfo, patientId: e.target.value})}
@@ -511,7 +996,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
                 <input
                   type="text"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="Enter Full Name"
                   value={patientInfo.name}
                   onChange={(e) => setPatientInfo({...patientInfo, name: e.target.value})}
@@ -521,7 +1006,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Age</label>
                 <input
                   type="number"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="Age"
                   value={patientInfo.age}
                   onChange={(e) => setPatientInfo({...patientInfo, age: e.target.value})}
@@ -530,7 +1015,7 @@ const MedicalAssessmentForm = () => {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Gender</label>
                 <select
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   value={patientInfo.gender}
                   onChange={(e) => setPatientInfo({...patientInfo, gender: e.target.value})}
                 >
@@ -544,7 +1029,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
                 <input
                   type="tel"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="Contact Number"
                   value={patientInfo.contact}
                   onChange={(e) => setPatientInfo({...patientInfo, contact: e.target.value})}
@@ -554,7 +1039,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Consulting Doctor</label>
                 <input
                   type="text"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="Doctor Name"
                   value={patientInfo.consultingDoctor}
                   onChange={(e) => setPatientInfo({...patientInfo, consultingDoctor: e.target.value})}
@@ -564,7 +1049,7 @@ const MedicalAssessmentForm = () => {
             <div className="mt-4">
               <label className="block text-sm font-semibold text-gray-700 mb-1">Address</label>
               <textarea
-                className="input-field"
+                className="input-field resize-none focus:border-[var(--primary-color)]"
                 rows={2}
                 placeholder="Enter Complete Address"
                 value={patientInfo.address}
@@ -574,7 +1059,7 @@ const MedicalAssessmentForm = () => {
           </div>
 
           {/* Vital Signs */}
-          <div className="bg-white rounded-lg shadow-sm border p-4">
+          <div className="rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
             <h2 className="h3-heading mb-4 flex items-center">
               <Stethoscope className="mr-2 text-[var(--accent-color)]" size={20} />
               Vital Signs
@@ -585,7 +1070,7 @@ const MedicalAssessmentForm = () => {
                 <input
                   type="number"
                   step="0.1"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="98.6"
                   value={vitals.temperature}
                   onChange={(e) => setVitals({...vitals, temperature: e.target.value})}
@@ -595,7 +1080,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Pulse (BPM)</label>
                 <input
                   type="number"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="72"
                   value={vitals.pulse}
                   onChange={(e) => setVitals({...vitals, pulse: e.target.value})}
@@ -605,7 +1090,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Blood Pressure</label>
                 <input
                   type="text"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="120/80"
                   value={vitals.bp}
                   onChange={(e) => setVitals({...vitals, bp: e.target.value})}
@@ -615,7 +1100,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">SpO2 (%)</label>
                 <input
                   type="number"
-                  className="input-field"
+                  className="input-field focus:border-[var(--primary-color)]"
                   placeholder="98"
                   value={vitals.spo2}
                   onChange={(e) => setVitals({...vitals, spo2: e.target.value})}
@@ -625,7 +1110,7 @@ const MedicalAssessmentForm = () => {
           </div>
 
           {/* Specialty-specific Sections */}
-          <div className="bg-white rounded-lg shadow-sm border p-4">
+          <div className="rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
             <h2 className="h3-heading mb-4 flex items-center">
               <IconComponent className="mr-2 text-[var(--accent-color)]" size={20} />
               {template.title}
@@ -634,7 +1119,7 @@ const MedicalAssessmentForm = () => {
           </div>
 
           {/* Handwritten Notes Section */}
-          <div className="bg-white rounded-lg shadow-sm border p-4">
+          <div className="rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
             <h2 className="h3-heading mb-4 flex items-center">
               <PenTool className="mr-2 text-[var(--accent-color)]" size={20} />
               Clinical Notes & Observations
@@ -653,79 +1138,20 @@ const MedicalAssessmentForm = () => {
             </div>
           </div>
 
-          {/* Signature Section */}
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <h2 className="h3-heading mb-4 flex items-center">
-              <FileText className="mr-2 text-[var(--accent-color)]" size={20} />
-              Doctor's Signature
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Digital Signature</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-                  <SignatureCanvas
-                    ref={signatureRef}
-                    canvasProps={{
-                      width: 350,
-                      height: 150,
-                      className: 'signature-canvas w-full rounded-lg'
-                    }}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={clearSignature}
-                  className="mt-2 flex items-center text-sm text-red-600 hover:text-red-800"
-                >
-                  <Trash2 size={14} className="mr-1" />
-                  Clear Signature
-                </button>
-              </div>
-              <div>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Doctor Name</label>
-                    <input
-                      type="text"
-                      className="input-field"
-                      value={patientInfo.consultingDoctor}
-                      onChange={(e) => setPatientInfo({...patientInfo, consultingDoctor: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      className="input-field"
-                      defaultValue={new Date().toISOString().slice(0, 16)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Registration Number</label>
-                    <input
-                      type="text"
-                      className="input-field"
-                      placeholder="Medical Registration Number"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Action Buttons */}
-          <div className="bg-white rounded-lg shadow-sm border p-4 print:hidden">
+          <div className="print:hidden">
             <div className="flex flex-wrap gap-3 justify-center">
               <button
                 type="submit"
                 className="btn btn-primary animate-pulse-save"
+                style={{ backgroundColor: 'var(--accent-color)' }}
               >
                 <Save size={18} />
                 Save Assessment
               </button>
               <button
                 type="button"
-                className="btn bg-gray-600 hover:bg-gray-700"
+                className="btn bg-gray-600 hover:bg-gray-700 text-white"
                 onClick={handlePrint}
               >
                 <Print size={16} />
@@ -733,7 +1159,7 @@ const MedicalAssessmentForm = () => {
               </button>
               <button
                 type="button"
-                className="btn bg-blue-600 hover:bg-blue-700"
+                className="edit-btn"
               >
                 <Download size={16} />
                 Export PDF

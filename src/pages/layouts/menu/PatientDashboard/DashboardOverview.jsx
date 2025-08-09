@@ -5,7 +5,7 @@ import { FaHeartbeat, FaThermometerHalf, FaTint, FaStethoscope, FaPlusCircle, Fa
 import { Activity, Droplets, Mic, MicOff } from "lucide-react";
 import { useSelector } from "react-redux";
 import ReusableModal from "../../../../components/microcomponents/Modal";
-
+import AppointmentList from "./AppointmentList";
 
 // Voice Input Hook and vital parsing utilities
 const useVoiceInput = () => {
@@ -13,6 +13,7 @@ const useVoiceInput = () => {
   const [transcript, setTranscript] = useState("");
   const [recognition, setRecognition] = useState(null);
   const [isSupported, setIsSupported] = useState(false);
+
   useEffect(() => {
     if (typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -24,6 +25,7 @@ const useVoiceInput = () => {
       setIsSupported(true);
     }
   }, []);
+
   const startListening = () => {
     if (recognition && !isListening) {
       setTranscript("");
@@ -31,17 +33,21 @@ const useVoiceInput = () => {
       setIsListening(true);
     }
   };
+
   const stopListening = () => {
     if (recognition && isListening) {
       recognition.stop();
       setIsListening(false);
     }
   };
+
   const toggleListening = () => {
     if (isListening) stopListening();
     else startListening();
   };
+
   const resetTranscript = () => setTranscript("");
+
   useEffect(() => {
     if (recognition) {
       recognition.onresult = (event) => {
@@ -59,8 +65,10 @@ const useVoiceInput = () => {
       };
     }
   }, [recognition]);
+
   return { isListening, transcript, startListening, stopListening, toggleListening, isSupported, resetTranscript };
 };
+
 const parseVitalFromSpeech = (transcript, vitalType) => {
   const text = transcript.toLowerCase().trim();
   const patterns = {
@@ -83,6 +91,7 @@ const parseVitalFromSpeech = (transcript, vitalType) => {
   }
   return null;
 };
+
 const parseMultipleVitals = (transcript) => {
   const vitals = {};
   const vitalTypes = ["heartRate", "temperature", "bloodSugar", "bloodPressure", "respiratoryRate", "spo2", "steps"];
@@ -101,10 +110,12 @@ const DashboardOverview = () => {
   const [isNew, setIsNew] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
+
   // Voice input for vitals
   const voiceInput = useVoiceInput();
   const [modalFormVals, setModalFormVals] = useState({});
   const [modalErrors, setModalErrors] = useState({});
+
   const vitalFields = [
     { name: "heartRate", label: "Heart Rate", type: "number", unit: "bpm", min: 30, max: 200, normalRange: "60-100 bpm" },
     { name: "temperature", label: "Temperature", type: "number", unit: "°C", step: "0.1", min: 30, max: 45, normalRange: "36.1-37.2 °C" },
@@ -114,12 +125,14 @@ const DashboardOverview = () => {
     { name: "spo2", label: "SpO₂", type: "number", unit: "%", min: 50, max: 100, normalRange: ">= 95%" },
     { name: "steps", label: "Steps", type: "number", unit: "steps", min: 0, max: 100000, normalRange: "Varies" },
   ];
+
   useEffect(() => {
     if (showModal) {
       setModalFormVals(healthSummary && !isNew ? healthSummary : {});
       setModalErrors({});
     }
   }, [showModal, healthSummary, isNew]);
+
   useEffect(() => {
     if (voiceInput.transcript && !voiceInput.isListening) {
       const parsedVitals = parseMultipleVitals(voiceInput.transcript);
@@ -132,10 +145,11 @@ const DashboardOverview = () => {
       }
     }
   }, [voiceInput.transcript, voiceInput.isListening]);
+
   const handleOpenModal = () => setShowModal(true);
   const handleCloseModal = () => setShowModal(false);
 
-  useEffect(() => { 
+  useEffect(() => {
     (async () => {
       try {
         const email = localStorage.getItem("email")?.trim().toLowerCase();
@@ -143,15 +157,15 @@ const DashboardOverview = () => {
         if (!email || !userId) return;
         const res = await axios.get("https://67e3e1e42ae442db76d2035d.mockapi.io/register/book");
         setAppointments(res.data.filter(a => a.email?.trim().toLowerCase() === email || a.userId?.trim() === userId).reverse());
-      } catch (err) { 
-        console.error("Error fetching doctor appointments:", err); 
+      } catch (err) {
+        console.error("Error fetching doctor appointments:", err);
       }
       setLoading(false);
-    })(); 
+    })();
   }, []);
 
-  useEffect(() => { 
-    if (!userEmail) return; 
+  useEffect(() => {
+    if (!userEmail) return;
     (async () => {
       try {
         const res = await axios.get("https://6808fb0f942707d722e09f1d.mockapi.io/health-summary");
@@ -160,14 +174,14 @@ const DashboardOverview = () => {
           setHealthSummary(userSummary);
           setSummaryId(userSummary.id);
           setIsNew(false);
-        } else { 
-          setHealthSummary({}); 
-          setIsNew(true); 
+        } else {
+          setHealthSummary({});
+          setIsNew(true);
         }
-      } catch (error) { 
-        console.error("Health summary fetch error", error); 
+      } catch (error) {
+        console.error("Health summary fetch error", error);
       }
-    })(); 
+    })();
   }, [userEmail]);
 
   const saveHealthSummary = async (formVals) => {
@@ -214,60 +228,53 @@ const DashboardOverview = () => {
   );
 
   return (
-    <div className="bg-[var(--color-surface)] text-[var(--primary-color)] min-h-screen pt-6 ">
+    <div className="bg-[var(--color-surface)] text-[var(--primary-color)] pt-2">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex flex-col lg:flex-row gap-6">
-          <div className="flex-1 overflow-x-auto rounded-2xl shadow-xl p-6 slide-in-up bg-white">
-            <div className="flex justify-between items-center mb-6">
-              <h4 className="h4-heading flex items-center gap-3"><FaCalendarAlt className="text-[var(--accent-color)]" />Recent Appointments</h4>
-              <Link to="/patientdashboard/app" className="text-[var(--primary-color)] font-medium hover:text-[var(--accent-color)] transition-colors duration-200 flex items-center space-x-1 text-sm"><span>View All</span><FaChevronRight className="text-xs" /></Link>
+          <div className="flex-1 overflow-x-auto rounded-2xl slide-in-up sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-3">
+              <h4 className="h4-heading flex items-center gap-2 sm:gap-3 text-base sm:text-lg">
+                <FaCalendarAlt className="text-[var(--accent-color)]" />Recent Appointments
+              </h4>
+              <Link
+                to="/patientdashboard/app"
+                className="text-[var(--primary-color)] font-medium hover:text-[var(--accent-color)] transition-colors duration-200 flex items-center space-x-1 border-b-2 text-sm"
+              >
+                <span>View All</span>
+                <FaChevronRight className="text-xs" />
+              </Link>
             </div>
-            <div className="table-container">
-              <table className="min-w-full">
-                <thead className="table-head">
-                  <tr>
-                    <th className="px-6 py-4 text-left">Date</th>
-                    <th className="px-6 py-4 text-left">Time</th>
-                    <th className="px-6 py-4 text-left">Doctor</th>
-                    <th className="px-6 py-4 text-left">Specialty</th>
-                    <th className="px-6 py-4 text-left">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="table-body">
-                  {appointments.length > 0 ? appointments.slice(0, 3).map((a) => (
-                    <tr key={a.id} className="tr-style hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4"><div className="flex items-center space-x-2"><FaCalendarAlt className="text-[var(--accent-color)] text-sm" /><span>{a.date || "N/A"}</span></div></td>
-                      <td className="px-6 py-4"><div className="flex items-center space-x-2"><FaClock className="text-[var(--primary-color)] text-sm" /><span>{a.time || "N/A"}</span></div></td>
-                      <td className="px-6 py-4"><div className="flex items-center space-x-2"><FaUserMd className="text-[var(--accent-color)] text-sm" /><span className="font-medium">{a.doctorName || "Dr. Unknown"}</span></div></td>
-                      <td className="px-6 py-4"><span className="paragraph">{a.specialty || "General Medicine"}</span></td>
-                      <td className="px-6 py-4">{getStatusBadge(a.status, a.rejectReason)}</td>
-                    </tr>
-                  )) : (<tr><td colSpan={5} className="text-center px-6 py-12 paragraph text-lg">😴 No appointments found.</td></tr>)}
-                </tbody>
-              </table>
+            <div className="overflow-x-auto -p-6">
+              <AppointmentList displayType="doctor" showOnlyDoctorColumns={true} isOverview={true} />
             </div>
           </div>
-          <div className="w-full lg:w-1/2 bg-white rounded-2xl shadow-xl p-6 slide-in-up">
+          <div className="w-full lg:w-1/2 rounded-2xl slide-in-up">
             <div className="flex justify-between items-center mb-6">
               <h4 className="h4-heading flex items-center gap-3"><FaHeartbeat className="text-[var(--accent-color)]" />Health Summary</h4>
               <button className="btn-secondary animate-bounce-gentle" onClick={handleOpenModal}><FaPlusCircle />{isNew ? "Add Vital" : "Update Vital"}</button>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {summaryCards.map((item, idx) => {
                 const hasData = item.value !== undefined && item.value !== null && item.value !== "" && item.value !== "N/A";
                 return (
-                  <div key={idx} className="card-stat hover:shadow-lg transition-all duration-300 p-4">
+                  <div
+                    key={idx}
+                    className="card-stat hover:shadow-lg transition-all duration-300 sm:p-4 rounded-xl bg-white"
+                  >
                     <div className="flex items-center space-x-3">
-                      {item.icon}
+                      <div className="flex-shrink-0">{item.icon}</div>
                       <div>
-                        <h5 className="card-stat-label font-semibold text-sm">{item.label}</h5>
+                        <h5 className="card-stat-label font-semibold text-sm sm:text-base">{item.label}</h5>
                         {hasData ? (
                           <div className="flex items-baseline space-x-1">
-                            <span className="card-stat-count text-lg">{item.value}</span>
+                            <span className="card-stat-count text-base sm:text-lg">{item.value}</span>
                             <span className="text-xs paragraph">{item.unit}</span>
                           </div>
                         ) : (
-                          <button onClick={handleOpenModal} className="text-xs mt-1 px-2 py-1 bg-gray-100 paragraph hover:bg-[var(--accent-color)] hover:text-white rounded-full transition-all duration-200">
+                          <button
+                            onClick={handleOpenModal}
+                            className="text-xs mt-1 px-2 py-1 bg-gray-100 paragraph hover:bg-[var(--accent-color)] hover:text-white rounded-full transition-all duration-200"
+                          >
                             + Add
                           </button>
                         )}
@@ -277,12 +284,11 @@ const DashboardOverview = () => {
                 );
               })}
             </div>
-
             {healthSummary.lastUpdated && (<div className="mt-6 pt-4 border-t border-gray-100"><p className="text-xs paragraph text-center">Last updated: {healthSummary.lastUpdated}</p></div>)}
           </div>
         </div>
       </div>
-      
+
       <ReusableModal
         isOpen={showModal}
         onClose={handleCloseModal}

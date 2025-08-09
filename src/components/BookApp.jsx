@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import axios from "axios";
@@ -242,7 +244,7 @@ const MultiStepForm = () => {
           }
         }
         
-        // If no exact state match, try partial matching
+      
         if (!matchedState) {
           for (const [stateName, cities] of Object.entries(stateCityMap)) {
             if (stateName.toLowerCase().includes(detectedState.toLowerCase()) ||
@@ -444,6 +446,7 @@ const MultiStepForm = () => {
       location: state.consultationType === "Virtual" ? "Online" : state.location,
       doctorId: state.selectedDoctor?.id || "N/A",
       doctorName: state.selectedDoctor?.name || "N/A",
+      fees: state.selectedDoctor?.fees ?? '',
       status: "Upcoming",
       notification: {
         doctorId: state.selectedDoctor?.id || "N/A",
@@ -458,10 +461,19 @@ const MultiStepForm = () => {
     });
     
     try {
-      await Promise.all([
-        axios.post("https://67e3e1e42ae442db76d2035d.mockapi.io/register/book", payload),
-        axios.post("https://67e631656530dbd3110f0322.mockapi.io/drnotifiy", payload.notification)
-      ]);
+      // First, try to book the appointment
+      const bookingResponse = await axios.post("https://67e3e1e42ae442db76d2035d.mockapi.io/register/book", payload);
+      
+      // If booking is successful, try to send notification (but don't fail if this fails)
+      try {
+        await axios.post("https://67e631656530dbd3110f0322.mockapi.io/drnotifiy", payload.notification);
+      } catch (notificationError) {
+        console.warn("Notification failed but booking was successful:", notificationError);
+        // Don't throw error here - booking was successful
+      }
+      
+      // If we reach here, booking was successful
+      console.log("Booking successful:", bookingResponse.data);
       
       setTimeout(() => {
         // Clear form state from session storage after successful booking
@@ -489,15 +501,30 @@ const MultiStepForm = () => {
           states: Object.keys(stateCityMap),
           cities: [],
           pincodeError: "",
-          isCurrentLocation: false
+          isCurrentLocation: false,
+          isLoading: false
         });
         navigate("/patientdashboard/app");
       }, 2000);
+      
     } catch (error) {
       console.error("Booking failed:", error);
-      alert("Booking failed. Please try again.");
-    } finally {
-      updateState({ isLoading: false });
+      
+      // Close the confirmation modal and show error
+      updateState({ 
+        showConfirmationModal: false,
+        isLoading: false 
+      });
+      
+      // Show more specific error message
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          "Booking failed. Please check your internet connection and try again.";
+      
+      alert(`Booking Failed: ${errorMessage}`);
+      
+      // Reopen the booking modal so user can try again
+      updateState({ showBookingModal: true });
     }
   };
 
@@ -553,22 +580,20 @@ const MultiStepForm = () => {
       <div className="max-w-3xl mx-auto">
         {/* Compact Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl mb-4 shadow-lg">
-            <FaStethoscope className="text-white text-2xl" />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">
-            Book Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Appointment</span>
-          </h1>
-          <p className="text-slate-600 text-sm">Connect with top healthcare professionals instantly</p>
+          
+         
         </div>
 
         {/* Main Form Container */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-6 space-y-6">
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+          <div className="space-y-4">
+             <h3 className="text-xl md:text-3xl text-center font-bold text-slate-800 mb-2">
+            Book Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Appointment</span>
+          </h3>
+            <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
               Consultation Type
-            </h3>
+            </p>
             <div className="flex gap-4">
               {["Physical", "Virtual"].map(type => (
                 <button
@@ -1055,7 +1080,7 @@ const MultiStepForm = () => {
             {/* Auto-close indicator */}
             <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
               <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-emerald-500"></div>
-            
+              <span>Redirecting to patientdashboard...</span>
             </div>
           </div>
         </div>

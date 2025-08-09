@@ -15,7 +15,7 @@ import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import PaymentGateway from "../../../../components/microcomponents/PaymentGatway";
+import PaymentGatewayPage from "../../../../components/microcomponents/PaymentGatway";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -589,17 +589,14 @@ resetForm();
 toast.error("Failed to submit booking.");
 }
 };
-
 const handlePayNow = () => {
-if (!data) return;
-const booking = buildBooking();
-setBookingData(booking);
-booking.totalAmount > 0
-? setShowPaymentGateway(true)
-: toast.info(
-"No equipment charges to pay. Please use Submit Booking instead."
-);
+  const booking = buildBooking();
+  setBookingData(booking);
+  console.log("Booking Data:", booking); // Log booking data
+  setShowPaymentGateway(true); // Set to true to show the modal
+  console.log("Payment Gateway State:", showPaymentGateway); // Log state
 };
+
 
 const handlePaymentSuccess = async (paymentData) => {
 try {
@@ -1510,27 +1507,28 @@ pauseOnFocusLoss
 draggable
 pauseOnHover
 />
-
-  <PaymentGateway
-    isOpen={showPaymentGateway}
-    onClose={() => setShowPaymentGateway(false)}
-    amount={calculateEquipmentTotal()}
-    bookingId={`AMB_${Date.now()}`}
-    currency="₹"
-    onPaymentSuccess={handlePaymentSuccess}
-    onPaymentFailure={handlePaymentFailure}
-    customerDetails={{
-      name: addressForm.name || "Customer",
-      phone: addressForm.phone || "9901341763",
-    }}
-    description="Ambulance Equipment Payment"
-    allowedMethods={["card", "upi", "wallet", "netbanking"]}
-    theme={{
-      primaryColor: "#0E1630",
-      accentColor: "#01D48C",
-      surfaceColor: "#FFFFFF",
-    }}
-  />
+{showPaymentGateway && (
+      <div className="fixed inset-0 z-10 bg-gray-600 bg-opacity-50 flex justify-center items-center">
+        <PaymentGatewayPage
+          amount={bookingData.amount}
+          bookingId={bookingData.bookingId}
+          currency="₹"
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentFailure={handlePaymentFailure}
+          customerDetails={{
+            name: "Customer Name",
+            phone: "1234567890",
+          }}
+          description="Ambulance Booking Payment"
+          allowedMethods={["card", "upi", "wallet", "netbanking"]}
+          theme={{
+            primaryColor: "#0E1630",
+            accentColor: "#01D48C",
+            surfaceColor: "#FFFFFF",
+          }}
+        />
+      </div>
+    )}
 
   {showLocationPopup && renderLocationPopup()}
 

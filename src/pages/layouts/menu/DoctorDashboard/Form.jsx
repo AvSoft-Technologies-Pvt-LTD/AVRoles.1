@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  Heart, FileText, FlaskRound as Flask, Pill, Stethoscope, Eye, Save, Printer, User, Phone, Mail, Calendar, Menu, X, ChevronLeft,
+  Heart, FileText, FlaskRound as Flask, Pill, Stethoscope, Eye, Save, Printer, User, Phone, Mail, Calendar, Menu, X, ChevronLeft, Building, Bed, Activity,
 } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -47,31 +47,25 @@ const ChartModal = ({ isOpen, onClose, vital, records, selectedIdx }) => {
     { id: 'pie', name: 'Pie Chart', icon: '🥧' },
     { id: 'radar', name: 'Radar Chart', icon: '🕸️' }
   ];
+
   if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fadeIn">
       <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-3xl relative">
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-gray-500 hover:text-red-500"
-        >
+        <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-red-500">
           <X className="w-5 h-5" />
         </button>
         <h3 className="h4-heading mb-4">
-          {vital
-            ? `${vital.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())} Chart (7 Days)`
-            : "Vitals Chart & Records (7 Days)"}
+          {vital ? `${vital.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())} Chart (7 Days)` : "Vitals Chart & Records (7 Days)"}
         </h3>
-        {/* Chart Type Selector */}
         <div className="flex flex-wrap gap-2 mb-4 border-b border-gray-200 pb-3">
           {chartTypes.map((type) => (
             <button
               key={type.id}
               onClick={() => setChartType(type.id)}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                chartType === type.id
-                  ? 'bg-[var(--primary-color)] text-white'
-                  : 'bg-gray-100 text-[var(--primary-color)] hover:bg-gray-200'
+                chartType === type.id ? 'bg-[var(--primary-color)] text-white' : 'bg-gray-100 text-[var(--primary-color)] hover:bg-gray-200'
               }`}
             >
               <span>{type.icon}</span>
@@ -80,13 +74,7 @@ const ChartModal = ({ isOpen, onClose, vital, records, selectedIdx }) => {
           ))}
         </div>
         <div className="h-96 flex flex-col w-full">
-          <VitalsChart
-            vital={vital}
-            records={records}
-            selectedIdx={selectedIdx}
-            range={vitalRanges[vital]}
-            chartType={chartType}
-          />
+          <VitalsChart vital={vital} records={records} selectedIdx={selectedIdx} range={vitalRanges[vital]} chartType={chartType} />
         </div>
       </div>
     </div>
@@ -95,7 +83,7 @@ const ChartModal = ({ isOpen, onClose, vital, records, selectedIdx }) => {
 
 function App() {
   const location = useLocation();
-  const patient = location.state?.patient || { name: "Unknown Patient", email: "unknown@example.com", phone: "N/A", age: "N/A", gender: "N/A", diagnosis: "N/A" };
+  const patient = location.state?.patient || { name: "Unknown Patient", email: "unknown@example.com", phone: "N/A", age: "N/A", gender: "N/A", diagnosis: "N/A", wardType: "N/A" };
   const [activeForm, setActiveForm] = useState('all');
   const [formsData, setFormsData] = useState({});
   const [doctorSignature, setDoctorSignature] = useState(null);
@@ -105,13 +93,48 @@ function App() {
   const [chartVital, setChartVital] = useState(null);
   const signaturePadRef = useRef();
 
-  useEffect(() => { const storedSignature = localStorage.getItem('doctorSignature'); if (storedSignature) setDoctorSignature(storedSignature); }, []);
+  // Check if patient is from IPD tab
+  const isIPDPatient = patient?.wardType || patient?.wardNo || patient?.bedNo ||
+                       patient?.status === "Admitted" || patient?.status === "Under Treatment" ||
+                       patient?.status === "Discharged" || patient?.admissionDate || patient?.dischargeDate;
 
-  const calculateAge = dob => { if (!dob) return "N/A"; const today = new Date(); const birthDate = new Date(dob); let age = today.getFullYear() - birthDate.getFullYear(); const monthDiff = today.getMonth() - birthDate.getMonth(); if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--; return age; };
+  useEffect(() => {
+    const storedSignature = localStorage.getItem('doctorSignature');
+    if (storedSignature) setDoctorSignature(storedSignature);
+  }, []);
+
+  const calculateAge = (dob) => {
+    if (!dob) return "N/A";
+    const today = new Date();
+    const birthDate = new Date(dob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+    return age;
+  };
+
   const getPatientName = () => patient.name || `${patient.firstName || ""} ${patient.middleName || ""} ${patient.lastName || ""}`.trim() || "Unknown Patient";
   const getPatientAge = () => (patient.age && patient.age !== "N/A" ? patient.age : calculateAge(patient.dob));
-  const handleSignatureUpload = e => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = ({ target }) => { if (target?.result) { setDoctorSignature(target.result); localStorage.setItem('doctorSignature', target.result); } }; reader.readAsDataURL(file); } };
-  const handleClearSignature = () => { if (signaturePadRef.current) signaturePadRef.current.clear(); setDoctorSignature(null); };
+
+  const handleSignatureUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = ({ target }) => {
+        if (target?.result) {
+          setDoctorSignature(target.result);
+          localStorage.setItem('doctorSignature', target.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleClearSignature = () => {
+    if (signaturePadRef.current) signaturePadRef.current.clear();
+    setDoctorSignature(null);
+  };
+
   const getStyledPrescriptionHTML = (doctor, patient, signature, logoUrl, formContent) => {
     return `
       <div style="width:800px;font-family:'Poppins',sans-serif;padding:40px;box-sizing:border-box;border:2px solid #0e1630;background:#fff;">
@@ -141,7 +164,7 @@ function App() {
         <div style="margin-top:40px;width:100%;height:100px;background:linear-gradient(to right,#f9f9f9,#f1f1f1);border-top:3px solid #0e1630;display:flex;align-items:center;justify-content:space-between;padding:0 40px;box-sizing:border-box;box-shadow:0 -2px 6px rgba(0,0,0,0.05);">
           <div style="display:flex;align-items:center;">
             <div style="width:80px;height:80px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-right:30px;">
-              <img src="${AVLogo}" alt="AV Logo" style="width:100%; height:100%; border-radius:8px; object-fit:cover; " />
+              <img src="${AVLogo}" alt="AV Logo" style="width:100%; height:100%; border-radius:8px; object-fit:cover;" />
             </div>
             <div style="color:#1696c9;font-size:14px;line-height:1.5;">
               <div style="display:inline"><span style="display:inline-flex;align-items:center;gap:6px;color:#0e1630;font-size:16px;"><svg width="18" height="18" fill="#01D48C" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg> Dharwad, Karnataka, 580001</span><br/><span style="display:inline-flex;align-items:center;gap:6px;color:#0e1630;font-size:16px;"><svg width="18" height="18" fill="#01D48C" viewBox="0 0 24 24"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.21c1.21.49 2.53.76 3.88.76a1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1h3.5a1 1 0 011 1c0 1.35.27 2.67.76 3.88a1 1 0 01-.21 1.11l-2.2 2.2z"/></svg> +12-345 678 9012</span></div>
@@ -155,17 +178,16 @@ function App() {
       </div>
     `;
   };
+
   const handlePrintForm = (formType) => {
     const data = formsData[formType];
     if (!data) return;
-
     const doctor = {
       name: "Dr. Sheetal S. Shelke",
       specialization: "Neurologist",
       regNo: "MH123456",
       qualifications: "MBBS, MD",
     };
-
     let formContent = "";
     switch (formType) {
       case "vitals":
@@ -189,19 +211,12 @@ function App() {
       default:
         formContent = "<p>No content available for this form.</p>";
     }
-
-    const header = getStyledPrescriptionHTML(
-      doctor,
-      patient,
-      doctorSignature,
-      AVLogo,
-      formContent
-    );
+    const header = getStyledPrescriptionHTML(doctor, patient, doctorSignature, AVLogo, formContent);
     const win = window.open("", "", "width=900,height=700");
     win.document.write(`
       <html>
         <head>
-          <title>Print Form</title> 
+          <title>Print Form</title>
           <style>body { font-family: 'Poppins', sans-serif; }</style>
         </head>
         <body>${header}</body>
@@ -210,6 +225,7 @@ function App() {
     win.document.close();
     win.focus();
   };
+
   const printAllForms = () => {
     const doctor = {
       name: "Dr. Sheetal S. Shelke",
@@ -217,12 +233,8 @@ function App() {
       regNo: "MH123456",
       qualifications: "MBBS, MD",
     };
-
     const formsHtml = Object.keys(formsData)
-      .filter(
-        (formType) =>
-          formsData[formType] && Object.keys(formsData[formType]).length > 0
-      )
+      .filter((formType) => formsData[formType] && Object.keys(formsData[formType]).length > 0)
       .map((formType) => {
         const data = formsData[formType];
         switch (formType) {
@@ -243,18 +255,10 @@ function App() {
         }
       })
       .join('<div class="page-break"></div>');
-
     if (!formsHtml) {
       return toast.error("No forms with data to print.");
     }
-
-    const header = getStyledPrescriptionHTML(
-      doctor,
-      patient,
-      doctorSignature,
-      "",
-      formsHtml
-    );
+    const header = getStyledPrescriptionHTML(doctor, patient, doctorSignature, "", formsHtml);
     const win = window.open("", "", "width=900,height=700");
     win.document.write(`
       <html>
@@ -275,20 +279,20 @@ function App() {
       autoClose: 2000,
     });
   };
+
   const handleSaveForm = (formType, data) => {
     setFormsData(prev => ({
       ...prev,
       [formType]: data,
     }));
-    localStorage.setItem(
-      "medicalForms",
-      JSON.stringify({
-        ...formsData,
-        [formType]: data,
-      })
-    );
+    localStorage.setItem("medicalForms", JSON.stringify({
+      ...formsData,
+      [formType]: data,
+    }));
   };
+
   const commonProps = { onSave: handleSaveForm, onPrint: handlePrintForm, patient, setIsChartOpen, setChartVital };
+
   const renderActiveForm = () => activeForm === 'all' ? (
     <div className="space-y-8 animate-slideIn">
       <VitalsForm data={formsData.vitals} {...commonProps} />
@@ -311,124 +315,125 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          {/* --- PATIENT DETAILS SECTION START --- */}
-{showPatientDetails && (
-  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 mb-4 animate-fadeIn">
-    
-    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 w-full">
-      
-      {/* LEFT: Avatar + Info Section */}
-      <div className="flex items-center gap-6 flex-wrap w-full lg:w-auto">
-        
-        {/* Avatar */}
-        <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-r from-[var(--primary-color)] to-[var(--accent-color)] text-white text-sm font-bold shadow-lg">
-          {getPatientName()?.split(' ').map(n => n[0]).join('') || 'N/A'}
-        </div>
-
-        {/* Name + Email + Details */}
-        <div className="flex flex-col gap-1 min-w-0">
-          {/* Name + Email */}
-          <div>
-            <h2 className="text-lg font-semibold text-gray-800 truncate">{getPatientName()}</h2>
-            <div className="flex items-center gap-2 text-sm text-[var(--accent-color)] truncate">
-              <Mail className="w-4 h-4" />
-              <span className="truncate">{patient?.email || 'N/A'}</span>
-            </div>
-          </div>
-
-          {/* Contact + Age + Gender + Diagnosis (inline row) */}
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm pt-1">
-            <div className="flex items-center gap-1">
-              <Phone className="w-4 h-4 text-[var(--accent-color)]" />
-              <span><strong>Contact:</strong> {patient?.phone || 'N/A'}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <User className="w-4 h-4 text-[var(--accent-color)]" />
-              <span><strong>Age:</strong> {getPatientAge()}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="w-4 h-4 text-[var(--accent-color)]" />
-              <span><strong>Gender:</strong> {patient?.gender || 'N/A'}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <FileText className="w-4 h-4 text-[var(--accent-color)]" />
-              <span><strong>Diagnosis:</strong> {patient?.diagnosis || 'N/A'}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* RIGHT: Quick Links Panel */}
-      <div className="w-full lg:w-auto mt-4 lg:mt-0">
-        <QuickLinksPanel
-          patientId={patient?.id}
-          setActiveForm={setActiveForm}
-          patient={patient}
-        />
-      </div>
-    </div>
-  </div>
-)}
-
-
-          {/* --- PATIENT DETAILS SECTION END --- */}
-          {!showPatientDetails && (
-            <div className="mb-4">
-             
+          {showPatientDetails && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 mb-4 animate-fadeIn">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 w-full">
+                <div className="flex items-center gap-6 flex-wrap w-full lg:w-auto">
+                  <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-r from-[var(--primary-color)] to-[var(--accent-color)] text-white text-sm font-bold shadow-lg">
+                    {getPatientName()?.split(' ').map(n => n[0]).join('') || 'N/A'}
+                  </div>
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-800 truncate">{getPatientName()}</h2>
+                      <div className="flex items-center gap-2 text-sm text-[var(--accent-color)] truncate">
+                        <Mail className="w-4 h-4" />
+                        <span className="truncate">{patient?.email || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm pt-1">
+                      <div className="flex items-center gap-1">
+                        <Phone className="w-4 h-4 text-[var(--accent-color)]" />
+                        <span><strong>Contact:</strong> {patient?.phone || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <User className="w-4 h-4 text-[var(--accent-color)]" />
+                        <span><strong>Age:</strong> {getPatientAge()}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4 text-[var(--accent-color)]" />
+                        <span><strong>Gender:</strong> {patient?.gender || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <FileText className="w-4 h-4 text-[var(--accent-color)]" />
+                        <span><strong>Diagnosis:</strong> {patient?.diagnosis || 'N/A'}</span>
+                      </div>
+                    </div>
+                    {isIPDPatient && (
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm pt-2 border-t border-blue-200 mt-2">
+                        <div className="flex items-center gap-1">
+                          <Building className="w-4 h-4 text-[var(--accent-color)]" />
+                          <span><strong>Ward Type:</strong> {patient?.wardType || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Building className="w-4 h-4 text-[var(--accent-color)]" />
+                          <span><strong>Ward No:</strong> {patient?.wardNo || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Bed className="w-4 h-4 text-[var(--accent-color)]" />
+                          <span><strong>Bed No:</strong> {patient?.bedNo || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Activity className="w-4 h-4 text-[var(--accent-color)]" />
+                          <span><strong>Status:</strong>
+                            <span className={`ml-1 px-2 py-1 rounded-full text-xs ${
+                              patient?.status === "ADMITTED" || patient?.status === "Admitted" ? "bg-green-100 text-green-800" :
+                              patient?.status === "Under Treatment" ? "bg-yellow-100 text-yellow-800" :
+                              patient?.status === "DISCHARGED" || patient?.status === "Discharged" ? "bg-gray-100 text-gray-800" :
+                              "bg-blue-100 text-blue-800"
+                            }`}>
+                              {patient?.status?.toUpperCase() || 'N/A'}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="w-full lg:w-auto mt-4 lg:mt-0">
+                  <QuickLinksPanel patientId={patient?.id} setActiveForm={setActiveForm} patient={patient} />
+                </div>
+              </div>
             </div>
           )}
-         <div className="flex flex-wrap gap-2 mt-4 items-center justify-between md:justify-start">
-  <div className="flex flex-wrap gap-2">
-    {Object.values(formTypes).map(formType => {
-      const Icon = formType.icon;
-      const isActive = activeForm === formType.id;
-      return (
-        <button
-          key={formType.id}
-          onClick={() => setActiveForm(formType.id)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 
-            ${isActive
-              ? 'bg-[var(--primary-color)] text-white shadow'
-              : 'bg-white text-[var(--primary-color)] border border-gray-300 hover:bg-gray-50'
-            }`}
-        >
-         {Icon && <Icon className="w-4 h-4" />}
-          {formType.name}
-        </button>
-      );
-    })}
-  </div>
-  <button
-    className="flex items-center gap-2 px-5 py-2 rounded-md bg-[var(--primary-color)] text-white text-sm font-semibold hover:shadow-lg border border-[var(--accent-color)]"
-    onClick={printAllForms}
-  >
-    <Printer className="w-4 h-4" />
-    Print All
-  </button>
-</div>
-
+          {!showPatientDetails && (
+            <div className="mb-4"></div>
+          )}
+          <div className="flex flex-wrap gap-2 mt-4 items-center justify-between md:justify-start">
+            <div className="flex flex-wrap gap-2">
+              {Object.values(formTypes).map(formType => {
+                const Icon = formType.icon;
+                const isActive = activeForm === formType.id;
+                return (
+                  <button
+                    key={formType.id}
+                    onClick={() => setActiveForm(formType.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                      isActive ? 'bg-[var(--primary-color)] text-white shadow' : 'bg-white text-[var(--primary-color)] border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {Icon && <Icon className="w-4 h-4" />}
+                    {formType.name}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              className="flex items-center gap-2 px-5 py-2 rounded-md bg-[var(--primary-color)] text-white text-sm font-semibold hover:shadow-lg border border-[var(--accent-color)]"
+              onClick={printAllForms}
+            >
+              <Printer className="w-4 h-4" />
+              Print All
+            </button>
+          </div>
           {isMobileMenuOpen && (
             <div className="md:hidden mt-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 animate-slideIn">
               <div className="grid grid-cols-2 gap-2">
-              {Object.values(formTypes).map(formType => {
-  const Icon = formType.icon;
-  const isActive = activeForm === formType.id;
-  return (
-    <button
-      key={formType.id}
-      onClick={() => setActiveForm(formType.id)}
-      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 
-        ${isActive
-          ? 'bg-[var(--primary-color)] text-white shadow'
-          : 'bg-white text-[var(--primary-color)] border border-gray-300 hover:bg-gray-50'
-        }`}
-    >
-      {Icon && <Icon className="w-4 h-4" />}
-      {formType.name}
-    </button>
-  );
-})}
-
+                {Object.values(formTypes).map(formType => {
+                  const Icon = formType.icon;
+                  const isActive = activeForm === formType.id;
+                  return (
+                    <button
+                      key={formType.id}
+                      onClick={() => setActiveForm(formType.id)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                        isActive ? 'bg-[var(--primary-color)] text-white shadow' : 'bg-white text-[var(--primary-color)] border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {Icon && <Icon className="w-4 h-4" />}
+                      {formType.name}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -464,19 +469,9 @@ function App() {
           </div>
         </div>
       </div>
-
-      {/* Chart Modal */}
-      <ChartModal
-        isOpen={isChartOpen}
-        onClose={() => setIsChartOpen(false)}
-        vital={chartVital}
-        records={formsData.vitals?.vitalsRecords || []}
-        selectedIdx={null}
-      />
-
+      <ChartModal isOpen={isChartOpen} onClose={() => setIsChartOpen(false)} vital={chartVital} records={formsData.vitals?.vitalsRecords || []} selectedIdx={null} />
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
     </div>
-    
   );
 }
 
@@ -494,7 +489,6 @@ const getVitalsTemplate = (d) => `
     </tr></tbody>
   </table>`;
 
-
 const getClinicalNotesTemplate = (d) => `
   <h4 style="color:#2980b9;">Clinical Notes</h4>
   <table style="${tableStyle}">
@@ -507,7 +501,6 @@ const getClinicalNotesTemplate = (d) => `
       <td style="${tdStyle}">${d.advice||'-'}</td><td style="${tdStyle}">${d.plan||'-'}</td>
     </tr></tbody>
   </table>`;
-
 
 const getLabResultsTemplate = (d) => `
   <h4 style="color:#8e44ad;">Lab Results</h4>
@@ -525,7 +518,6 @@ const getLabResultsTemplate = (d) => `
       `).join('')}
     </tbody>
   </table>`;
-
 
 const getDentalTemplate = (d) => `
   <h4 style="color:#e67e22;">Dental Problem Action Plan</h4>
@@ -545,7 +537,6 @@ const getDentalTemplate = (d) => `
       `).join('')}
     </tbody>
   </table>`;
-;
 
 const getEyeTestTemplate = (d) => `
   <h4 style="color:#1976d2;background:#e3f2fd;padding:10px 16px;border-radius:8px;">Eye Test Report</h4>
@@ -573,7 +564,6 @@ const getEyeTestTemplate = (d) => `
     </tbody>
   </table>`;
 
-
 const getPrescriptionTemplate = (prescriptions=[]) => {
   const rows = prescriptions.map(m=>({...m,eye:/left eye/i.test(m.drugName)?'Left Eye':/right eye/i.test(m.drugName)?'Right Eye':''}));
   return `
@@ -594,6 +584,5 @@ const getPrescriptionTemplate = (prescriptions=[]) => {
       </tbody>
     </table>`;
 };
-
 
 export default App;
