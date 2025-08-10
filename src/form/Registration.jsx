@@ -635,9 +635,12 @@ const RegisterForm = () => {
           {renderInput("hospitalName", "text", "Hospital Name", true)}
           {renderInput("headCeoName", "text", "Head/CEO Name", true)}
           {renderInput("registrationNumber", "text", "Registration Number", true)}
+                   {renderInput("phone", "text", "Phone Number", true)}
+          {renderInput("email", "email", "Email", true)}
+            {renderInput("gstNumber", "text", "GST Number", true)}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {renderInput("gstNumber", "text", "GST Number", true)}
+        
           <CompactDropdownCheckbox
             label="Hospital Type"
             required
@@ -648,6 +651,11 @@ const RegisterForm = () => {
             allowOther
             otherValue={formData.otherHospitalType}
             onOtherChange={(value) => setFormData(prev => ({ ...prev, otherHospitalType: value }))}
+          />
+           <PhotoUpload
+            photoPreview={photoPreview}
+            onPhotoChange={handleFileChange}
+            onPreviewClick={() => setIsModalOpen(true)}
           />
           <NeatFileUpload
             name="nabhCertificate"
@@ -750,19 +758,33 @@ const RegisterForm = () => {
           </div>
           {renderInput("centerName", "text", "Center Name", true)}
           {renderInput("ownerFullName", "text", "Owner's Full Name", true)}
+                   {renderInput("phone", "text", "Phone Number", true)}
+          {renderInput("email", "email", "Email", true)}
+            {renderInput("registrationNumber", "text", "Registration Number", true)}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {renderInput("registrationNumber", "text", "Registration Number", true)}
-          {renderInput("licenseNumber", "text", "License Number", true)}
+        
           {renderInput("gstNumber", "text", "GST Number", true)}
-        </div>
+          <NeatFileUpload
+        name="certificates"
+        accept=".pdf,.jpg,.jpeg,.png"
+        multiple
+        files={formData.certificates || []}
+        onFileChange={handleFileChange}
+        label="Upload Certificates"
+        icon={FileText}
+      />
+       
         <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+          
           <PhotoUpload
             photoPreview={photoPreview}
             onPhotoChange={handleFileChange}
             onPreviewClick={() => setIsModalOpen(true)}
           />
         </div>
+         </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <CompactDropdownCheckbox
           label="Available Tests"
           options={labTestOptions}
@@ -771,7 +793,6 @@ const RegisterForm = () => {
           required
           placeholder="Select Available Tests"
         />
-        {errors.availableTests && <p className="error-text">{errors.availableTests}</p>}
         <CompactDropdownCheckbox
           label="Scan Services"
           options={scanServiceOptions}
@@ -786,24 +807,8 @@ const RegisterForm = () => {
           onChange={(selected) => setFormData(prev => ({ ...prev, specialServices: selected }))}
           placeholder="Select Special Services"
         />
-        <NeatFileUpload
-          name="certificates"
-          accept=".pdf,.jpg,.jpeg,.png"
-          multiple
-          files={formData.certificates || []}
-          onFileChange={handleFileChange}
-          label="Upload Certificates"
-          icon={FileText}
-        />
-        <NeatFileUpload
-          name="documents"
-          accept=".pdf,.jpg,.jpeg,.png"
-          multiple
-          files={formData.documents || []}
-          onFileChange={handleFileChange}
-          label="Upload Documents"
-          icon={FileText}
-        />
+      </div>
+      
       </>
     );
   } else if (userType === "doctor") {

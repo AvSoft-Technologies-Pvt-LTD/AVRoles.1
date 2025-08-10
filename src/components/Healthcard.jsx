@@ -7,7 +7,7 @@ import { Download, Phone, User, Calendar, Mail, X } from "lucide-react";
 import logo from "../assets/logo.png";
 
 const API_BASE_URL = "https://6801242781c7e9fbcc41aacf.mockapi.io/api/AV1";
-const CARD_API_URL = "https://6810972027f2fdac2411f6a5.mockapi.io/healthcard";
+const CARD_API_URL = "https://681075c727f2fdac24116e70.mockapi.io/user/healthcard";
 
 function Healthcard({ hideLogin }) {
   const [userData, setUserData] = useState(null);
@@ -18,46 +18,40 @@ function Healthcard({ hideLogin }) {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [modalContent, setModalContent] = useState("otp"); // 'otp' or 'info'
-
+  const [modalContent, setModalContent] = useState("otp");
   const navigate = useNavigate();
   const userEmail = useSelector((state) => state.auth.user?.email);
   const cardRef = useRef(null);
 
   useEffect(() => {
-    if (healthId) {
-      QRCode.toDataURL(healthId, { width: 128, margin: 2 }, (err, url) => {
-        if (err) return console.error("QR generation failed:", err);
-        setQrImage(url);
-      });
-    }
+    if (healthId) QRCode.toDataURL(healthId, { width: 128, margin: 2 }, (err, url) => {
+      if (err) return console.error("QR generation failed:", err);
+      setQrImage(url);
+    });
   }, [healthId]);
 
   useEffect(() => {
-  axios
-    .get(`${API_BASE_URL}/users?email=${encodeURIComponent(userEmail)}`)
-    .then((res) => {
-      if (res.data.length > 0) setUserData(res.data[0]);
-      else alert("User not found.");
-    })
-    .catch((err) => {
+    axios.get(`${API_BASE_URL}/users?email=${encodeURIComponent(userEmail)}`).then((res) => {
+      if (res.data.length > 0) {
+        const userData = res.data[0];
+        console.log("User Data:", userData);
+        setUserData(userData);
+      } else {
+        alert("User not found.");
+      }
+    }).catch((err) => {
       console.error("Error loading user profile:", err);
       alert("Error loading user profile.");
     });
-}, [userEmail]);
+  }, [userEmail]);
 
   useEffect(() => {
-    axios
-      .get("https://mocki.io/v1/ebea6c46-479d-40cf-9d3e-245975459b93")
-      .then((res) => setRtoData(res.data))
-      .catch((err) => console.error("Failed to fetch RTO data", err));
+    axios.get("https://mocki.io/v1/ebea6c46-479d-40cf-9d3e-245975459b93").then((res) => setRtoData(res.data)).catch((err) => console.error("Failed to fetch RTO data", err));
   }, []);
 
   const generateHealthId = (userData) => {
     const now = new Date();
-    const datePart = String(now.getFullYear()).slice(-2) +
-      String(now.getMonth() + 1).padStart(2, "0") +
-      String(now.getDate()).padStart(2, "0");
+    const datePart = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0");
     const stateCode = rtoData.states[userData.state] || "XX";
     const districtCode = rtoData.districts[userData.city] || "00";
     const gender = userData.gender?.charAt(0).toUpperCase() || "X";
@@ -78,12 +72,14 @@ function Healthcard({ hideLogin }) {
           localStorage.setItem("healthId", existing.healthId);
           return setIsCardGenerated(true);
         }
-        await axios.post(CARD_API_URL, { ...userData, healthId: genId });
+        const cardData = { firstName: userData.firstName, lastName: userData.lastName, gender: userData.gender, phone: userData.phone, dob: userData.dob, aadhaar: userData.aadhaar, state: userData.state, city: userData.city, healthId: genId, email: userData.email, id: userData.id, photo: userData.photo || "" };
+        const response = await axios.post(CARD_API_URL, cardData);
+        console.log("Response from API:", response);
         setHealthId(genId);
         localStorage.setItem("healthId", genId);
         setIsCardGenerated(true);
       } catch (e) {
-        console.error("Auto generation failed", e);
+        console.error("Auto generation failed", e.response || e.message || e);
         alert("Could not auto-generate Health Card.");
       }
     };
@@ -124,50 +120,23 @@ function Healthcard({ hideLogin }) {
           <img src={logo} alt="Logo" className="h-15 w-auto rounded-full" />
           <div className="text-right">
             <div className="flex items-center justify-end gap-2">
-              <h1 className="text-lg mr-4 font-extrabold bg-gradient-to-br from-[#01D48C] via-[#01D48C]/90 to-[#01D48C] bg-clip-text text-transparent">
-                AV SWASTHYA
-              </h1>
+              <h1 className="text-lg mr-4 font-extrabold text-[var(--accent-color)]">AV SWASTHYA</h1>
             </div>
             <p className="text-xs ml-6 text-gray-300">Healthcare Solutions</p>
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-center justify-start p-4">
           <div className="flex items-end justify-center p-1 mt-4 h-full">
-<img
-  src={
-    userData.photo?.url ||
-    "https://img.freepik.com/vecteurs-premium/icone-profil-avatar-par-defaut-image-utilisateur-medias-sociaux-icone-avatar-gris-silhouette-profil-vide-illustration-vectorielle_561158-3383.jpg"
-  }
-  alt="User"
-  className="w-16 h-16 sm:w-20 sm:h-20 object-cover border-2 border-white"
-/>
+            <img src={userData.photo || "https://img.freepik.com/vecteurs-premium/icone-profil-avatar-par-defaut-image-utilisateur-medias-sociaux-icone-avatar-gris-silhouette-profil-vide-illustration-vectorielle_561158-3383.jpg"} alt="User" className="w-16 h-16 sm:w-20 sm:h-20 object-cover border-2 border-white" />
           </div>
           <div className="flex-1 text-[var(--primary-color)] text-[13px] p-2 flex flex-col items-center sm:items-start">
-            <div className="font-bold leading-tight whitespace-nowrap">
-              {userData.firstName} {userData.lastName}
-            </div>
-            <div className="mt-1 flex items-center gap-1">
-              <span className="text-xs text-[var(--primary-color)]/70">Mobile: </span>
-              {userData.phone || "N/A"}
-            </div>
-            <div className="mt-1">
-              <span className="text-[var(--primary-color)]/70">DOB: </span>
-              {formatDate(userData.dob)}
-            </div>
-            <div>
-              <span className="text-xs text-[var(--primary-color)]/70">Gender: </span>
-              {userData.gender}
-            </div>
+            <div className="font-bold leading-tight whitespace-nowrap">{userData.firstName} {userData.lastName}</div>
+            <div className="mt-1 flex items-center gap-1"><span className="text-xs text-[var(--primary-color)]/70">Mobile: </span>{userData.phone || "N/A"}</div>
+            <div className="mt-1"><span className="text-[var(--primary-color)]/70">DOB: </span>{formatDate(userData.dob)}</div>
+            <div><span className="text-xs text-[var(--primary-color)]/70">Gender: </span>{userData.gender}</div>
           </div>
           <div className="flex items-center justify-center mt-4">
-            {qrImage && (
-              <img
-                src={qrImage}
-                alt="QR Code"
-                className="w-16 h-16 sm:w-20 sm:h-20"
-                onClick={handleScan}
-              />
-            )}
+            {qrImage && <img src={qrImage} alt="QR Code" className="w-16 h-16 sm:w-20 sm:h-20" onClick={handleScan} />}
           </div>
         </div>
         <div className="absolute bottom-4 ml-10 flex flex-col items-start gap-1 px-3 text-[var(--primary-color)] text-lg">
@@ -178,92 +147,35 @@ function Healthcard({ hideLogin }) {
           </div>
         </div>
       </div>
-
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex justify-center items-center">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
-                {modalContent === "otp" ? "Enter OTP" : "Health Card Information"}
-              </h2>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
-                <X />
-              </button>
+              <h2 className="text-xl font-bold">{modalContent === "otp" ? "Enter OTP" : "Health Card Information"}</h2>
+              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700"><X /></button>
             </div>
             {modalContent === "otp" ? (
               <div className="flex items-center gap-8">
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="Enter OTP"
-                  className="border rounded p-2"
-                />
-                <button
-                  onClick={handleVerifyOTP}
-                  className="px-4 py-2 bg-[var(--primary-color)] text-white rounded"
-                >
-                  Verify OTP
-                </button>
+                <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter OTP" className="border rounded p-2" />
+                <button onClick={handleVerifyOTP} className="px-4 py-2 bg-[var(--primary-color)] text-white rounded">Verify OTP</button>
               </div>
             ) : (
-              <>
-               <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full">
-      <h2 className="text-xl font-bold mb-4 text-center text-[var(--accent-color)]">Health Id: {healthId}</h2>
-      <div className="space-y-4">
-        <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm">
-          <User className="text-gray-600 mr-3" />
-          <div>
-            <p className="text-sm text-gray-500">Name</p>
-            <p className="font-semibold text-[var(--primary-color)]">{userData.firstName} {userData.lastName}</p>
-          </div>
-        </div>
-        <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm">
-          <Calendar className="text-gray-600 mr-3" />
-          <div>
-            <p className="text-sm text-gray-500">Date of Birth</p>
-            <p className="font-semibold text-[var(--primary-color)]">{formatDate(userData.dob)}</p>
-          </div>
-        </div>
-        <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm">
-          <Mail className="text-gray-600 mr-3" />
-          <div>
-            <p className="text-sm text-gray-500">Gender</p>
-            <p className="font-semibold text-[var(--primary-color)]">{userData.gender}</p>
-          </div>
-        </div>
-        <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm">
-          <Phone className="text-gray-600 mr-3" />
-          <div>
-            <p className="text-sm text-gray-500">Phone</p>
-            <p className="font-semibold text-[var(--primary-color)]">{userData.phone}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-              </>
+              <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full">
+                <h2 className="text-xl font-bold mb-4 text-center text-[var(--accent-color)]">Health Id: {healthId}</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm"><User className="text-gray-600 mr-3" /><div><p className="text-sm text-gray-500">Name</p><p className="font-semibold text-[var(--primary-color)]">{userData.firstName} {userData.lastName}</p></div></div>
+                  <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm"><Calendar className="text-gray-600 mr-3" /><div><p className="text-sm text-gray-500">Date of Birth</p><p className="font-semibold text-[var(--primary-color)]">{formatDate(userData.dob)}</p></div></div>
+                  <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm"><Mail className="text-gray-600 mr-3" /><div><p className="text-sm text-gray-500">Gender</p><p className="font-semibold text-[var(--primary-color)]">{userData.gender}</p></div></div>
+                  <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm"><Phone className="text-gray-600 mr-3" /><div><p className="text-sm text-gray-500">Phone</p><p className="font-semibold text-[var(--primary-color)]">{userData.phone}</p></div></div>
+                </div>
+              </div>
             )}
           </div>
         </div>
       )}
-
       <div className="flex gap-4">
-        <button
-          onClick={() => {
-            const t = document.title;
-            document.title = "AV Health Card";
-            window.print();
-            document.title = t;
-          }}
-          className="flex items-center gap-2 bg-[var(--primary-color)] text-[var(--color-surface)] font-semibold py-2 px-4 rounded-lg hover:bg-[#123456]"
-        >
-          <Download /> Download
-        </button>
-        {!hideLogin && (
-          <button onClick={() => navigate("/login")} className="px-4 py-2 view-btn">
-            Login
-          </button>
-        )}
+        <button onClick={() => { const t = document.title; document.title = "AV Health Card"; window.print(); document.title = t; }} className="flex items-center gap-2 bg-[var(--primary-color)] text-[var(--color-surface)] font-semibold py-2 px-4 rounded-lg hover:bg-[#123456]"><Download /> Download</button>
+        {!hideLogin && <button onClick={() => navigate("/login")} className="px-4 py-2 view-btn">Login</button>}
       </div>
     </div>
   );

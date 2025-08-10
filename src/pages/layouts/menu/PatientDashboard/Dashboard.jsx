@@ -125,35 +125,31 @@ function Dashboard() {
     { name: 'endDate', label: 'End Date', type: 'date', colSpan: 1.5 },
   ];
 
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      if (!user?.email) return;
-      try {
-        const res = await axios.get(`${PROFILE_API_URL}?email=${encodeURIComponent(user.email)}`);
-        const profile = res.data[0];
-        if (profile) {
-          const firstName = profile.firstName || '';
-          const lastName = profile.lastName || '';
-          if (profile?.photo?.blob) {
-            const objectUrl = URL.createObjectURL(new Blob([profile.photo.blob], { type: profile.photo.type }));
-            profile.photoUrl = objectUrl;
-          }
-          setProfileData({
-            name: `${firstName} ${lastName}`.trim(),
-            firstName,
-            lastName,
-            dob: profile.dob || '',
-            gender: profile.gender || '',
-            phone: profile.phone || '',
-            photo: profile.photoUrl || null
-          });
-        }
-      } catch (err) {
-        console.error('Failed to fetch profile data:', err);
+useEffect(() => {
+  const fetchProfileData = async () => {
+    if (!user?.email) return;
+    try {
+      const res = await axios.get(`${PROFILE_API_URL}?email=${encodeURIComponent(user.email)}`);
+      const profile = res.data[0];
+      if (profile) {
+        const firstName = profile.firstName || '';
+        const lastName = profile.lastName || '';
+        setProfileData({
+          name: `${firstName} ${lastName}`.trim(),
+          firstName,
+          lastName,
+          dob: profile.dob || '',
+          gender: profile.gender || '',
+          phone: profile.phone || '',
+          photo: profile.photo || null // Ensure photo is correctly set
+        });
       }
-    };
-    fetchProfileData();
-  }, [user]);
+    } catch (err) {
+      console.error('Failed to fetch profile data:', err);
+    }
+  };
+  fetchProfileData();
+}, [user]);
 
   const showFeedback = (message, type = 'success') => {
     setFeedbackMessage({ show: true, message, type });
@@ -331,34 +327,34 @@ function Dashboard() {
   const completionStatus = getSectionCompletionStatus();
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen">
         <div className="bg-gradient-to-r from-[#0e1630] via-[#1b2545] to-[#038358] text-white p-4 rounded-xl flex flex-col sm:flex-row sm:items-center gap-4 shadow-lg w-full">
-      <div className="relative w-20 h-20 sm:w-24 sm:h-24">
-      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
-        <circle className="text-gray-300" stroke="currentColor" strokeWidth="2" fill="none" r="16" cx="18" cy="18" />
-        <circle
-          stroke={getProgressColor(profileCompletion || 0)}
-          strokeWidth="2"
-          strokeDasharray="100"
-          strokeDashoffset={100 - (profileCompletion || 0)}
-          strokeLinecap="round"
-          fill="none"
-          r="16"
-          cx="18"
-          cy="18"
-        />
-      </svg>
-      <div className="relative w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-        {profileData?.photo ? (
-          <img src={profileData.photo} alt="Profile" className="w-full h-full object-cover rounded-full" />
-        ) : (
-          <CircleUser className="w-10 h-10 sm:w-16 sm:h-16 text-gray-500" />
-        )}
-      </div>
-      <div className="absolute bottom-0 right-0 bg-yellow-400 text-black px-2 py-1 text-xs font-bold rounded-full z-20">
-        {profileCompletion}%
-      </div>
-    </div>
+<div className="relative w-20 h-20 sm:w-24 sm:h-24">
+  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
+    <circle className="text-gray-300" stroke="currentColor" strokeWidth="2" fill="none" r="16" cx="18" cy="18" />
+    <circle
+      stroke={getProgressColor(profileCompletion || 0)}
+      strokeWidth="2"
+      strokeDasharray="100"
+      strokeDashoffset={100 - (profileCompletion || 0)}
+      strokeLinecap="round"
+      fill="none"
+      r="16"
+      cx="18"
+      cy="18"
+    />
+  </svg>
+  <div className="absolute inset-2 flex items-center justify-center">
+    {profileData?.photo ? (
+      <img src={profileData.photo} alt="Profile" className="w-full h-full object-cover rounded-full" />
+    ) : (
+      <CircleUser className="w-16 h-16 text-gray-500" />
+    )}
+  </div>
+  <div className="absolute bottom-0 right-0 bg-yellow-400 text-black px-2 py-1 text-xs font-bold rounded-full">
+    {profileCompletion}%
+  </div>
+</div>
       <div className="flex flex-row flex-wrap gap-3 sm:gap-4 items-center flex-1 min-w-0">
         {[
           { label: "Name", value: `${profileData.firstName || "Guest"} ${profileData.lastName || ""}`.trim() },

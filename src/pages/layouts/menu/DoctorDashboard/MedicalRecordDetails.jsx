@@ -128,34 +128,29 @@ const MedicalRecordDetails = () => {
     },
   };
 
-  useEffect(() => {
-    const fetchPatientDetails = async () => {
-      if (!email && !phone) return;
-      try {
-        let url = `https://681f2dfb72e59f922ef5774c.mockapi.io/addpatient?`;
-        const params = [];
-        if (email) {
-          params.push(`email=${encodeURIComponent(email)}`);
-        }
-        if (phone) {
-          params.push(`phone=${encodeURIComponent(phone)}`);
-        }
-        url += params.join('&');
+ useEffect(() => {
+  const fetchPatientDetails = async () => {
+    // Stop if no phone number
+    if (!phone) return;
 
-        const res = await axios.get(url);
-          console.log("API Response:", res.data);
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          setPatientDetails(res.data[0]);
-        } else if (res.data) {
-          setPatientDetails(res.data);
-        }
-      } catch (e) {
-        setPatientDetails(null);
+    try {
+      const url = `https://681f2dfb72e59f922ef5774c.mockapi.io/addpatient?phone=${encodeURIComponent(phone)}`;
+
+      const res = await axios.get(url);
+      console.log("API Response:", res.data);
+
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        setPatientDetails(res.data[0]); // take first matching record
+      } else if (res.data) {
+        setPatientDetails(res.data);
       }
-    };
+    } catch (e) {
+      setPatientDetails(null);
+    }
+  };
 
-    fetchPatientDetails();
-  }, [email, phone]);
+  fetchPatientDetails();
+}, [phone]); // only depends on phone
 
   const calculateAge = (dob, appointmentDate) => {
     if (!dob || !appointmentDate) return "N/A";

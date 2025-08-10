@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -65,6 +67,12 @@ const DrMedicalRecords = () => {
           else if (rec.type === "Virtual") virtual.push(rec);
         });
         setMedicalData({ OPD: opd, IPD: ipd, Virtual: virtual });
+
+        // Initialize hiddenIds from API data
+        const hiddenRecords = response.data
+          .filter(record => record.hiddenByPatient)
+          .map(record => record.id);
+        updateState({ hiddenIds: hiddenRecords });
       } catch (err) {
         setFetchError("Failed to fetch medical records.");
       } finally {
@@ -94,56 +102,102 @@ const DrMedicalRecords = () => {
   // When navigating to details, always pass the exact values from the API (no formatting)
   // Always pass the correct patientName, email, and phone from the API record
   const handleViewDetails = (record) => {
-  // Try all possible field names for name/email/phone
-  const patientName = record.patientName || record.name || record.firstName || record.lastName || '';
-  const email = record.email || record.patientEmail || record.Email || '';
-  const phone = record.phone || record.phoneNumber || record.Phone || '';
+    // Try all possible field names for name/email/phone
+    const patientName = record.patientName || record.name || record.firstName || record.lastName || '';
+    const email = record.email || record.patientEmail || record.Email || '';
+    const phone = record.phone || record.phoneNumber || record.Phone || '';
 
-  // Extract first name and last name from patientName
-  const nameParts = patientName.split(" ");
-  const firstName = nameParts[0] || "Guest";
-  const lastName = nameParts.slice(1).join(" ") || "Guest";
+    // Extract first name and last name from patientName
+    const nameParts = patientName.split(" ");
+    const firstName = nameParts[0] || "Guest";
+    const lastName = nameParts.slice(1).join(" ") || "Guest";
 
-  const patientData = {
-    ...record,
-    patientName,
-    email,
-    phone,
-    id: record.id || record.patientId || '',
-    currentDate: new Date().toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }),
-    currentTime: new Date().toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }),
-    firstName,
-    lastName
+    const patientData = {
+      ...record,
+      patientName,
+      email,
+      phone,
+      id: record.id || record.patientId || '',
+      currentDate: new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }),
+      currentTime: new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }),
+      firstName,
+      lastName
+    };
+
+    navigate("/doctordashboard/medical-record-details", {
+      state: {
+        selectedRecord: {
+          ...patientData,
+          isVerified: record.isVerified || false,
+          hasDischargeSummary: record.hasDischargeSummary || false,
+          phoneConsent: record.phoneConsent || false,
+          createdBy: record.createdBy || "patient"
+        },
+        firstName,
+        lastName,
+        email,
+        phone
+      },
+    });
   };
 
-  navigate("/doctordashboard/medical-record-details", {
-    state: {
-      selectedRecord: patientData,
-      firstName,
-      lastName,
-      email,
-      phone
-    },
-  });
-};
-
-
   const handleHideRecord = (id) => {
-    updateState({ hiddenIds: [...state.hiddenIds, id] });
+    updateHideStatus(id, true);
   };
 
   const handleUnhideRecord = (id) => {
-    updateState({
-      hiddenIds: state.hiddenIds.filter((hiddenId) => hiddenId !== id),
-    });
+    updateHideStatus(id, false);
+  };
+
+  // Function to update hide status in API and local state
+  const updateHideStatus = async (recordId, isHidden) => {
+    try {
+      // Update the record in the API
+      await axios.put(
+        `https://6895d385039a1a2b28907a16.mockapi.io/pt-mr/patient-mrec/${recordId}`,
+        { hiddenByPatient: isHidden }
+      );
+
+      // Update local state
+      setMedicalData(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(type => {
+          updated[type] = updated[type].map(record =>
+            record.id === recordId
+              ? { ...record, hiddenByPatient: isHidden }
+              : record
+          );
+        });
+        return updated;
+      });
+
+      // Update hiddenIds for UI consistency
+      if (isHidden) {
+        updateState({ hiddenIds: [...state.hiddenIds, recordId] });
+      } else {
+        updateState({
+          hiddenIds: state.hiddenIds.filter((hiddenId) => hiddenId !== recordId),
+        });
+      }
+    } catch (error) {
+      console.error("Error updating hide status:", error);
+      // Fallback to local state only if API fails
+      if (isHidden) {
+        updateState({ hiddenIds: [...state.hiddenIds, recordId] });
+      } else {
+        updateState({
+          hiddenIds: state.hiddenIds.filter((hiddenId) => hiddenId !== recordId),
+        });
+      }
+    }
   };
 
   const handleAddRecord = async (formData) => {
@@ -160,7 +214,7 @@ const DrMedicalRecords = () => {
       email: formData.email || user?.email || "Not provided",
       phoneConsent: formData.phoneConsent || false,
       address: user?.address || "Not provided",
-      isVerified: formData.uploadedBy === "Doctor",
+      isVerified: true, // Always set to true for doctor-created records
       hasDischargeSummary: recordType === "IPD",
       isNewlyAdded: true, // Mark as newly added
       createdBy: "doctor", // Mark as created by doctor
@@ -182,7 +236,7 @@ const DrMedicalRecords = () => {
         "https://6895d385039a1a2b28907a16.mockapi.io/pt-mr/patient-mrec",
         newRecord
       );
-      
+
       // Update local state with the response data (which includes the API-generated ID)
       setMedicalData(prev => {
         const updated = {
@@ -195,7 +249,9 @@ const DrMedicalRecords = () => {
         // Save to localStorage as backup
         try {
           localStorage.setItem("medicalData", JSON.stringify(updated));
-        } catch {}
+        } catch (e) {
+          console.error("Error saving to localStorage:", e);
+        }
         return updated;
       });
 
@@ -215,7 +271,9 @@ const DrMedicalRecords = () => {
         };
         try {
           localStorage.setItem("medicalData", JSON.stringify(updated));
-        } catch {}
+        } catch (e) {
+          console.error("Error saving to localStorage:", e);
+        }
         return updated;
       });
       updateState({ showAddModal: false });
@@ -265,16 +323,30 @@ const DrMedicalRecords = () => {
           if (key === "hospitalName") {
             return (
               <div className={`flex items-center gap-2 ${hiddenClass}`}>
-                {/* Only show one green checkmark: isVerified/hasDischargeSummary takes priority, else phoneConsent */}
-                {(row.isVerified || row.hasDischargeSummary) ? (
-                  <CheckCircle size={16} className="text-green-600" />
-                ) : row.phoneConsent ? (
-                  <CheckCircle 
-                    size={16} 
-                    className="text-green-600" 
-                    title="Phone consent given" 
+                {/* Show green checkmark based on multiple conditions */}
+                {(row.isVerified === true ||
+                  row.hasDischargeSummary === true ||
+                  row.phoneConsent === true ||
+                  row.createdBy === "doctor") && (
+                  <CheckCircle
+                    size={16}
+                    className="text-green-600"
+                    title={
+                      row.isVerified ? "Verified record" :
+                      row.hasDischargeSummary ? "Has discharge summary" :
+                      row.phoneConsent ? "Phone consent given" :
+                      "Doctor created record"
+                    }
                   />
-                ) : null}
+                )}
+                {/* Show orange eye-off icon if hidden by patient */}
+                {row.hiddenByPatient && (
+                  <EyeOff
+                    size={16}
+                    className="text-orange-500"
+                    title="Hidden by patient"
+                  />
+                )}
                 <button
                   type="button"
                   className="text-[var(--primary-color)] underline hover:text-[var(--accent-color)] font-semibold"
@@ -314,14 +386,14 @@ const DrMedicalRecords = () => {
   };
 
   // Filter records for the current tab, and add chiefComplaint fallback
-  // CRITICAL: Only show records where phone consent is given AND not hidden by patient AND not created by patient
-  const getCurrentTabData = () =>
-    (medicalData[state.activeTab] || [])
+  // Show only records that meet the criteria for the green checkmark
+  const getCurrentTabData = () => {
+    return (medicalData[state.activeTab] || [])
       .filter((record) => {
-        // Only show records where phone consent is given AND not hidden by patient AND not created by patient
-        return record.phoneConsent === true && 
-               record.hiddenByPatient !== true && 
-               record.createdBy !== "patient";
+        return (
+          record.isVerified === true ||
+          record.hasDischargeSummary === true
+        );
       })
       .map((record) => {
         const chiefComplaint = record.chiefComplaint || record.diagnosis || "";
@@ -331,6 +403,7 @@ const DrMedicalRecords = () => {
           isHidden: state.hiddenIds.includes(record.id),
         };
       });
+  };
 
   const getFormFields = (recordType) => [
     {
@@ -420,11 +493,7 @@ const DrMedicalRecords = () => {
       key: "hospitalName",
       label: "Hospital",
       options: [...new Set(Object.values(medicalData).flatMap((records) =>
-        records
-          .filter(record => record.phoneConsent === true && 
-                           record.hiddenByPatient !== true && 
-                           record.createdBy !== "patient")
-          .map((record) => record.hospitalName)
+        records.map((record) => record.hospitalName)
       ))].map(hospital => ({
         value: hospital,
         label: hospital,
@@ -517,19 +586,18 @@ const DrMedicalRecords = () => {
   // Get statistics for records with phone consent, not hidden by patient, and not created by patient
   const getConsentStats = () => {
     const allRecords = Object.values(medicalData).flat();
-    const consentRecords = allRecords.filter(record => record.phoneConsent === true && record.createdBy !== "patient");
-    const visibleRecords = allRecords.filter(record => 
-      record.phoneConsent === true && 
-      record.hiddenByPatient !== true && 
-      record.createdBy !== "patient"
+    const verifiedRecords = allRecords.filter(record =>
+      record.isVerified === true ||
+      record.hasDischargeSummary === true
     );
-    const totalDoctorRecords = allRecords.filter(record => record.createdBy !== "patient").length;
-    
+    const visibleRecords = verifiedRecords; // Show only verified records
+    const totalRecords = allRecords.length;
+
     return {
-      withConsent: consentRecords.length,
+      withConsent: verifiedRecords.length,
       visible: visibleRecords.length,
-      total: totalDoctorRecords,
-      percentage: totalDoctorRecords > 0 ? Math.round((visibleRecords.length / totalDoctorRecords) * 100) : 0
+      total: totalRecords,
+      percentage: totalRecords > 0 ? Math.round((visibleRecords.length / totalRecords) * 100) : 0
     };
   };
 
@@ -539,10 +607,10 @@ const DrMedicalRecords = () => {
     <div className="p-6 space-y-6">
       {/* Back Button */}
       <button
-        className="mb-4  inline-flex items-center"
+        className="mb-4 inline-flex items-center"
         onClick={() => navigate("/doctordashboard/patients")}
       >
-          <ArrowLeft size={20} /> <span className="ms-2 font-medium">Back to Patient List</span>
+        <ArrowLeft size={20} /> <span className="ms-2 font-medium">Back to Patient List</span>
       </button>
 
       {/* Patient summary card */}
@@ -601,11 +669,6 @@ const DrMedicalRecords = () => {
           <Search size={24} className="text-[var(--primary-color)]" />
           <div>
             <h2 className="h4-heading">Medical Records History</h2>
-            {consentStats.withConsent !== consentStats.visible && (
-              <p className="text-xs text-orange-600 mt-1">
-                {consentStats.withConsent - consentStats.visible} doctor-created records with consent are hidden by patients
-              </p>
-            )}
           </div>
         </div>
       </div>
@@ -633,12 +696,9 @@ const DrMedicalRecords = () => {
           <div className="flex flex-col items-center gap-4">
             <CheckCircle size={48} className="text-gray-400" />
             <div>
-              <h3 className="text-lg font-semibold mb-2">No Visible Doctor Records</h3>
+              <h3 className="text-lg font-semibold mb-2">No Medical Records</h3>
               <p className="text-sm">
-                Only medical records created by doctors where patients have given phone consent and haven't hidden them are displayed here.
-              </p>
-              <p className="text-xs mt-2 text-gray-500">
-                Doctor records: {consentStats.total} | With consent: {consentStats.withConsent} | Visible: {consentStats.visible}
+                No medical records found for this patient in the selected category.
               </p>
             </div>
           </div>

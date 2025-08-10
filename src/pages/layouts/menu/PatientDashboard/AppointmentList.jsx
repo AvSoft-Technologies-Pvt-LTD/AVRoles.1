@@ -6,7 +6,7 @@ import Pagination from "../../../../components/Pagination";
 import DynamicTable from "../../../../components/microcomponents/DynamicTable";
 import PaymentGatewayPage from "../../../../components/microcomponents/PaymentGatway";
 
-const AppointmentList = ({ displayType, showOnlyTable = false, isOverview = false  }) => {
+const AppointmentList = ({ displayType, showOnlyTable = false, isOverview = false }) => {
   const navigate = useNavigate();
   const initialType = displayType || localStorage.getItem("appointmentTab") || "doctor";
   const [state, setState] = useState({
@@ -17,7 +17,7 @@ const AppointmentList = ({ displayType, showOnlyTable = false, isOverview = fals
     showPaymentGateway: false,
   });
   const [page, setPage] = useState(1);
-  const rowsPerPage = 4;
+  const rowsPerPage = isOverview ? 4 : 4; // Set rowsPerPage to 4 if it's an overview
 
   useEffect(() => {
     localStorage.setItem("appointmentTab", state.t);
@@ -63,58 +63,76 @@ const AppointmentList = ({ displayType, showOnlyTable = false, isOverview = fals
       showPaymentGateway: true,
     }));
   };
-const handlePaymentSuccess = async (paymentDetails) => {    try {      const updatedAppointments = state.d.map((appointment) =>        appointment.id === state.selectedAppointment.id          ? { ...appointment, status: "Paid" }          : appointment      );      setState((prev) => ({        ...prev,        d: updatedAppointments,        showPaymentGateway: false,      }));      await axios.put(        `https://67e3e1e42ae442db76d2035d.mockapi.io/register/book/${state.selectedAppointment.id}`,        { status: "Paid" }      );    } catch (error) {      console.error("Error updating appointment status:", error);    }  };
 
+  const handlePaymentSuccess = async (paymentDetails) => {
+    try {
+      const updatedAppointments = state.d.map((appointment) =>
+        appointment.id === state.selectedAppointment.id
+          ? { ...appointment, status: "Paid" }
+          : appointment
+      );
+      setState((prev) => ({
+        ...prev,
+        d: updatedAppointments,
+        showPaymentGateway: false,
+      }));
+      await axios.put(
+        `https://67e3e1e42ae442db76d2035d.mockapi.io/register/book/${state.selectedAppointment.id}`,
+        { status: "Paid" }
+      );
+    } catch (error) {
+      console.error("Error updating appointment status:", error);
+    }
+  };
 
-const handlePaymentFailure = (error) => {
-  console.error("Payment Failure:", error);
-  alert(`Payment failed: ${error.reason}. Please try again or use a different payment method.`);
-  setState((prev) => ({ ...prev, showPaymentGateway: false }));
-};
+  const handlePaymentFailure = (error) => {
+    console.error("Payment Failure:", error);
+    alert(`Payment failed: ${error.reason}. Please try again or use a different payment method.`);
+    setState((prev) => ({ ...prev, showPaymentGateway: false }));
+  };
 
- const getStatusBadge = (status, appointment) => {
-  if (status === "Paid") {
-    return (
-      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
-        Paid
-      </span>
-    );
-  } else if (status === "Confirmed") {
-    return (
-      <div className="flex items-center space-x-2">
-        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-          Confirmed
+  const getStatusBadge = (status, appointment) => {
+    if (status === "Paid") {
+      return (
+        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
+          Paid
         </span>
-        {!showOnlyTable && !isOverview && (
-          <button
-            onClick={() => handlePayClick(appointment)}
-            className="group relative inline-flex items-center justify-center gap-2 px-4 py-1 border border-green-500 text-green-500 rounded-full font-semibold bg-transparent overflow-hidden transition-colors duration-300 ease-in-out hover:bg-green-500 hover:text-white"
-          >
-            Pay
-          </button>
-        )}
-      </div>
-    );
-  } else if (status?.toLowerCase() === "rejected") {
-    return (
-      <div className="flex items-center space-x-4 paragraph mt-1">
-        <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full">
-          Rejected
-        </span>
-        <div>
-          <strong>Reason:</strong> {appointment.rejectReason}
+      );
+    } else if (status === "Confirmed") {
+      return (
+        <div className="flex items-center space-x-2">
+          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+            Confirmed
+          </span>
+          {!showOnlyTable && !isOverview && (
+            <button
+              onClick={() => handlePayClick(appointment)}
+              className="group relative inline-flex items-center justify-center gap-2 px-4 py-1 border border-green-500 text-green-500 rounded-full font-semibold bg-transparent overflow-hidden transition-colors duration-300 ease-in-out hover:bg-green-500 hover:text-white"
+            >
+              Pay
+            </button>
+          )}
         </div>
-      </div>
-    );
-  } else {
-    return (
-      <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
-        Waiting for Confirmation
-      </span>
-    );
-  }
-};
-
+      );
+    } else if (status?.toLowerCase() === "rejected") {
+      return (
+        <div className="flex items-center space-x-4 paragraph mt-1">
+          <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full">
+            Rejected
+          </span>
+          <div>
+            <strong>Reason:</strong> {appointment.rejectReason}
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+          {isOverview ? "Pending" : "Waiting for Confirmation"}
+        </span>
+      );
+    }
+  };
 
   const doctorColumns = [
     { header: "Doctor", accessor: "doctorName" },
@@ -200,17 +218,17 @@ const handlePaymentFailure = (error) => {
   const totalDoctorPages = Math.ceil(state.d.length / rowsPerPage);
   const totalLabPages = Math.ceil(state.l.length / rowsPerPage);
   const totalPages = state.t === "doctor" ? totalDoctorPages : totalLabPages;
-  const currentDoctorAppointments = state.d.slice(
-    (page - 1) * rowsPerPage,
-    page * rowsPerPage
-  );
-  const currentLabAppointments = state.l.slice(
-    (page - 1) * rowsPerPage,
-    page * rowsPerPage
-  );
+
+  const currentDoctorAppointments = isOverview
+    ? state.d.slice(0, 4)
+    : state.d.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+  const currentLabAppointments = isOverview
+    ? state.l.slice(0, 4)
+    : state.l.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   return (
-    <div className="p-4">
+    <div className={isOverview ? "p-0" : "p-6"}>
       {state.showPaymentGateway ? (
         <PaymentGatewayPage
           amount={state.selectedAppointment.fees}
@@ -227,8 +245,9 @@ const handlePaymentFailure = (error) => {
             tabActions={tabActions}
             activeTab={state.t}
             onTabChange={handleTabChange}
+            showSearchBar={!isOverview}
           />
-          {!showOnlyTable && (
+          {!showOnlyTable && !isOverview && (
             <div className="w-full flex justify-end mt-4">
               <Pagination
                 page={page}
