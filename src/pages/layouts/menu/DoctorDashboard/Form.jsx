@@ -498,79 +498,93 @@ function App() {
                         </span>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm pt-1">
-                      <div className="flex items-center gap-1">
-                        <Phone className="w-4 h-4 text-[var(--accent-color)]" />
-                        <span>
-                          <strong>Contact:</strong> {patient?.phone || "N/A"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4 text-[var(--accent-color)]" />
-                        <span>
-                          <strong>Age:</strong> {getPatientAge()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4 text-[var(--accent-color)]" />
-                        <span>
-                          <strong>Gender:</strong> {patient?.gender || "N/A"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <FileText className="w-4 h-4 text-[var(--accent-color)]" />
-                        <span>
-                          <strong>Diagnosis:</strong>{" "}
-                          {patient?.diagnosis || "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                    {isIPDPatient && (
-                      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm pt-2 border-t border-blue-200 mt-2">
-                        <div className="flex items-center gap-1">
-                          <Building className="w-4 h-4 text-[var(--accent-color)]" />
-                          <span>
-                            <strong>Ward Type:</strong>{" "}
-                            {patient?.wardType || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Building className="w-4 h-4 text-[var(--accent-color)]" />
-                          <span>
-                            <strong>Ward No:</strong>{" "}
-                            {patient?.wardNo || patient?.wardNumber || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Bed className="w-4 h-4 text-[var(--accent-color)]" />
-                          <span>
-                            <strong>Bed No:</strong>{" "}
-                            {patient?.bedNo || patient?.bedNumber || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Activity className="w-4 h-4 text-[var(--accent-color)]" />
-                          <span>
-                            <strong>Status:</strong>
-                            <span
-                              className={`ml-1 px-2 py-1 rounded-full text-xs ${
-                                patient?.status === "ADMITTED" ||
-                                patient?.status === "Admitted"
-                                  ? "bg-green-100 text-green-800"
-                                  : patient?.status === "Under Treatment"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : patient?.status === "DISCHARGED" ||
-                                    patient?.status === "Discharged"
-                                  ? "bg-gray-100 text-gray-800"
-                                  : "bg-blue-100 text-blue-800"
-                              }`}
-                            >
-                              {patient?.status?.toUpperCase() || "N/A"}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                    )}
+               <div className="flex flex-wrap gap-x-12 gap-y-3 text-sm pt-1">
+  {/* Column 1: Contact + Ward Type */}
+  <div className="flex flex-col gap-1">
+    <div className="flex items-center gap-1">
+      <Phone className="w-4 h-4 text-[var(--accent-color)]" />
+      <span>
+        <strong>Contact:</strong> {patient?.phone || "N/A"}
+      </span>
+    </div>
+    {isIPDPatient && (
+      <div className="flex items-center gap-1">
+        <Building className="w-4 h-4 text-[var(--accent-color)]" />
+        <span>
+          <strong>Ward Type:</strong> {patient?.wardType || "N/A"}
+        </span>
+      </div>
+    )}
+  </div>
+
+  {/* Column 2: Age + Ward No */}
+  <div className="flex flex-col gap-1">
+    <div className="flex items-center gap-1">
+      <User className="w-4 h-4 text-[var(--accent-color)]" />
+      <span>
+        <strong>Age:</strong> {getPatientAge()}
+      </span>
+    </div>
+    {isIPDPatient && (
+      <div className="flex items-center gap-1">
+        <Building className="w-4 h-4 text-[var(--accent-color)]" />
+        <span>
+          <strong>Ward No:</strong> {patient?.wardNo || patient?.wardNumber || "N/A"}
+        </span>
+      </div>
+    )}
+  </div>
+
+  {/* Column 3: Gender + Bed No */}
+  <div className="flex flex-col gap-1">
+    <div className="flex items-center gap-1">
+      <Calendar className="w-4 h-4 text-[var(--accent-color)]" />
+      <span>
+        <strong>Gender:</strong> {patient?.gender || "N/A"}
+      </span>
+    </div>
+    {isIPDPatient && (
+      <div className="flex items-center gap-1">
+        <Bed className="w-4 h-4 text-[var(--accent-color)]" />
+        <span>
+          <strong>Bed No:</strong> {patient?.bedNo || patient?.bedNumber || "N/A"}
+        </span>
+      </div>
+    )}
+  </div>
+
+  {/* Column 4: Diagnosis + Status */}
+  <div className="flex flex-col gap-1">
+    <div className="flex items-center gap-1">
+      <FileText className="w-4 h-4 text-[var(--accent-color)]" />
+      <span>
+        <strong>Diagnosis:</strong> {patient?.diagnosis || "N/A"}
+      </span>
+    </div>
+    {isIPDPatient && (
+      <div className="flex items-center gap-1">
+        <Activity className="w-4 h-4 text-[var(--accent-color)]" />
+        <span>
+          <strong>Status:</strong>
+          <span
+            className={`ml-1 px-2 py-1 rounded-full text-xs ${
+              patient?.status === "ADMITTED" || patient?.status === "Admitted"
+                ? "bg-green-100 text-green-800"
+                : patient?.status === "Under Treatment"
+                ? "bg-yellow-100 text-yellow-800"
+                : patient?.status === "DISCHARGED" || patient?.status === "Discharged"
+                ? "bg-gray-100 text-gray-800"
+                : "bg-blue-100 text-blue-800"
+            }`}
+          >
+            {patient?.status?.toUpperCase() || "N/A"}
+          </span>
+        </span>
+      </div>
+    )}
+  </div>
+</div>
+
                   </div>
                 </div>
                 <div className="w-full lg:w-auto mt-4 lg:mt-0">

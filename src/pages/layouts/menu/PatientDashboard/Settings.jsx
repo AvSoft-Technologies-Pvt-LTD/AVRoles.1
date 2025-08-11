@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Camera, Eye, EyeOff, Edit2, Check, Save, X, User, Lock } from "lucide-react";
 import { useSelector } from "react-redux";
+import axios from "axios";
+
 const formFields = {
   personal: [
     { id: "firstName", label: "First Name", type: "text", readOnly: true },
@@ -21,6 +23,7 @@ const formFields = {
     { id: "confirmPassword", label: "Confirm Password", type: "password", toggleVisibility: true },
   ],
 };
+
 const Settings = () => {
   const user = useSelector((state) => state.auth.user);
   const fileInputRef = useRef(null);
@@ -28,7 +31,7 @@ const Settings = () => {
   const [formData, setFormData] = useState({});
   const [profileImage, setProfileImage] = useState("");
   const [passwordVisibility, setPasswordVisibility] = useState({});
-  const [hasUnsavedChanges, sethasUnsavedChanges] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +41,7 @@ const Settings = () => {
   useEffect(() => {
     if (user) {
       setFormData({ ...user, currentPassword: "", newPassword: "", confirmPassword: "" });
-      setProfileImage(user.profileImage || "");
+      setProfileImage(user.photo || "");
       setIsLoading(false);
     }
   }, [user]);
@@ -46,7 +49,7 @@ const Settings = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    sethasUnsavedChanges(true);
+    setHasUnsavedChanges(true);
     if (saveSuccess) setSaveSuccess(false);
   };
 
@@ -57,7 +60,7 @@ const Settings = () => {
       reader.onload = (e) => {
         if (e.target?.result) {
           setProfileImage(e.target.result.toString());
-          sethasUnsavedChanges(true);
+          setHasUnsavedChanges(true);
           if (saveSuccess) setSaveSuccess(false);
         }
       };
@@ -65,16 +68,51 @@ const Settings = () => {
     }
   };
 
+  const saveProfileImage = async (email, imageDataUrl) => {
+    try {
+      const response = await axios.put('https://6801242781c7e9fbcc41aacf.mockapi.io/api/AV1', {
+        email: email,
+        profileImage: imageDataUrl
+      });
+      console.log('Image saved successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error saving profile image:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  };
+
+  const fetchUpdatedUserData = async (email) => {
+    try {
+      const response = await axios.get('https://6801242781c7e9fbcc41aacf.mockapi.io/api/AV1', {
+        params: { email: email }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching updated user data:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  };
+
   const handleSaveChanges = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     try {
+      if (profileImage && profileImage !== user.photo) {
+        await saveProfileImage(user.email, profileImage);
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const updatedUserData = await fetchUpdatedUserData(user.email);
+      setFormData({ ...updatedUserData, currentPassword: "", newPassword: "", confirmPassword: "" });
+      setProfileImage(updatedUserData.photo || "");
+
       setSaveSuccess(true);
       setIsEditMode(false);
-      sethasUnsavedChanges(false);
+      setHasUnsavedChanges(false);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch {
+    } catch (error) {
       setError("Failed to save changes. Please try again.");
     } finally {
       setIsSaving(false);
@@ -84,9 +122,9 @@ const Settings = () => {
   const handleCancelEdit = () => {
     if (!user) return;
     setFormData({ ...user, currentPassword: "", newPassword: "", confirmPassword: "" });
-    setProfileImage(user.profileImage || "");
+    setProfileImage(user.photo || "");
     setIsEditMode(false);
-    sethasUnsavedChanges(false);
+    setHasUnsavedChanges(false);
   };
 
   const renderField = ({ id, label, type, readOnly, options, toggleVisibility }) => {
@@ -190,8 +228,25 @@ const Settings = () => {
     }
   };
 
-  if (isLoading) return <div className="w-full min-h-screen flex items-center justify-center"><div className="animate-pulse flex flex-col items-center"><div className="w-32 h-32 bg-[var(--primary-color)] rounded-full mb-4"></div><div className="h3-heading"></div><div className="btn btn-primary"></div></div></div>;
-  if (error) return <div className="w-full min-h-screen flex items-center justify-center"><div className="bg-white p-8 rounded-lg shadow"><div className="h2-heading mb-4">Error</div><p className="paragraph">{error}</p><button onClick={() => window.location.reload()} className="btn btn-primary mt-4">Reload Page</button></div></div>;
+  if (isLoading) return (
+    <div className="w-full min-h-screen flex items-center justify-center">
+      <div className="animate-pulse flex flex-col items-center">
+        <div className="w-32 h-32 bg-[var(--primary-color)] rounded-full mb-4"></div>
+        <div className="h3-heading"></div>
+        <div className="btn btn-primary"></div>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="w-full min-h-screen flex items-center justify-center">
+      <div className="bg-white p-8 rounded-lg shadow">
+        <div className="h2-heading mb-4">Error</div>
+        <p className="paragraph">{error}</p>
+        <button onClick={() => window.location.reload()} className="btn btn-primary mt-4">Reload Page</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="mx-auto relative pb-20">
@@ -218,22 +273,31 @@ const Settings = () => {
             {profileImage ? (
               <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center ">
+              <div className="w-full h-full flex items-center justify-center">
                 <Camera size={22} className="text-gray-400" />
               </div>
             )}
           </div>
           {isEditMode && (
-            <div className="absolute bottom-0 right-0 w-8 h-8 bg-[var(--accent-color)] rounded-full flex items-center justify-center cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+            <div
+              className="absolute bottom-0 right-0 w-8 h-8 bg-[var(--accent-color)] rounded-full flex items-center justify-center cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <Camera size={18} className="text-white" />
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
             </div>
           )}
         </div>
       </div>
-      <div className=" -mt-16 pt-20 px-6">
+      <div className="-mt-16 pt-20 px-6">
         <div className="text-center">
-          <div className="paragraph">{formData.occupation || "User"} </div>
+          <div className="paragraph">{formData.occupation || "User"}</div>
           <h3 className="paragraph">{formData.firstName} {formData.lastName}</h3>
           <p className="paragraph">{formData.email}</p>
         </div>
@@ -291,4 +355,5 @@ const Settings = () => {
     </div>
   );
 };
+
 export default Settings;

@@ -612,7 +612,7 @@ const RegisterForm = () => {
               <option value="">Select Gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
-              <option value="other">Other</option>
+              <option value="Transgender">Transgender</option>
             </select>
             {errors.gender && <p className="error-text">{errors.gender}</p>}
           </div>
@@ -836,7 +836,7 @@ const RegisterForm = () => {
               <option value="">Select Gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
-              <option value="other">Other</option>
+              <option value="Transgender">Transgender</option>
             </select>
             {errors.gender && <p className="error-text">{errors.gender}</p>}
           </div>

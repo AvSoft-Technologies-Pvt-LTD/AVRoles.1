@@ -9,6 +9,7 @@ import {
 import { createPortal } from "react-dom";
 import toast, { Toaster } from "react-hot-toast";
 import Consult from "../../assets/CTABG.jpg";
+import Videocall from "../../assets/videocalling.avif"; // Replace with the actual path to your image
 
 const Modal = ({ show, onClose, children, large, showEndButton }) =>
   show
@@ -65,7 +66,6 @@ const VideoModal = ({ show, onClose, videoBlob, patientName }) =>
                 ×
               </button>
             </div>
-
             <div className="bg-black rounded-lg overflow-hidden mb-4">
               <video
                 controls
@@ -77,7 +77,6 @@ const VideoModal = ({ show, onClose, videoBlob, patientName }) =>
                 </p>
               </video>
             </div>
-
             <div className="flex justify-end gap-3">
               <button
                 onClick={onClose}
@@ -123,8 +122,10 @@ export default function TeleConsultFlow({
     [error, setError] = useState(""),
     [mediaRecorder, setMediaRecorder] = useState(null);
   const chunks = useRef([]);
+
   const floatLabel =
     "absolute left-3 text-gray-400 transition-all duration-200 bg-white px-1 pointer-events-none peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:top-[-0.6rem] peer-focus:text-xs peer-focus:text-[var(--primary-color)] top-[-0.6rem] text-xs";
+
   const reset = () => {
     setStep(1);
     setCallType("");
@@ -139,6 +140,7 @@ export default function TeleConsultFlow({
     if (mediaRecorder && mediaRecorder.state !== "inactive")
       mediaRecorder.stop();
   };
+
   const openCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -162,6 +164,7 @@ export default function TeleConsultFlow({
       setError("Camera or microphone access denied.");
     }
   };
+
   const toggleAudio = () => {
     if (stream) {
       const audioTrack = stream.getAudioTracks()[0];
@@ -187,7 +190,6 @@ export default function TeleConsultFlow({
       >
         <FaPhone className="rotate-[100deg] text-xl" />
       </button>
-
       <Modal
         show={open}
         onClose={handleEndConsultation}
@@ -195,6 +197,8 @@ export default function TeleConsultFlow({
         showEndButton={step === 3 && callType === "video"}
       >
         <h2 className="h4-heading font-semibold mb-2">Tele Consult</h2>
+        <img src={Videocall} alt="Description of the image" className="w-54 h-54 m-4 mx-auto" />
+        {/* Rest of your component code remains the same */}
         {step === 1 && (
           <div className="space-y-4">
             <div>
@@ -250,7 +254,6 @@ export default function TeleConsultFlow({
         )}
         {step === 2 && (
           <div className="space-y-4 text-center">
-            <img src={Consult} alt="Consult" className="w-40 mx-auto" />
             <div className="relative">
               <input
                 type="text"

@@ -1,4 +1,3 @@
-//Emergency.jsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   MapContainer,
@@ -17,6 +16,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useNavigate } from "react-router-dom";
+import PaymentGatewayPage from "../../../../components/microcomponents/PaymentGatway";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -42,8 +42,7 @@ const Emergency = () => {
   const [showPickupDropdown, setShowPickupDropdown] = useState(false);
   const pickupRef = useRef(null);
   const [dropLocationSearch, setDropLocationSearch] = useState("");
-  const [showDropLocationDropdown, setShowDropLocationDropdown] =
-    useState(false);
+  const [showDropLocationDropdown, setShowDropLocationDropdown] = useState(false);
   const dropLocationRef = useRef(null);
   const [equip, setEquip] = useState([]);
   const [date, setDate] = useState(new Date());
@@ -62,6 +61,8 @@ const Emergency = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [bookingData, setBookingData] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   // Location popup states
   const [showLocationPopup, setShowLocationPopup] = useState(false);
@@ -83,8 +84,7 @@ const Emergency = () => {
   });
   const equipRef = useRef(null);
   const searchRef = useRef(null);
-  const BOOKING_API_URL =
-    "https://mocki.io/v1/a5267894-5dcd-4423-b13d-6bbcf17509c6";
+  const BOOKING_API_URL = "https://mocki.io/v1/a5267894-5dcd-4423-b13d-6bbcf17509c6";
   const navigate = useNavigate();
 
   // Map click handler component
@@ -128,7 +128,6 @@ const Emergency = () => {
     } else toast.error("Geolocation not supported");
   };
 
-  // Generate location suggestions
   const generateLocationSuggestions = async (query) => {
     if (!query.trim()) {
       setLocationSuggestions([]);
@@ -159,7 +158,6 @@ const Emergency = () => {
     }
   };
 
-  // Handle location search input change
   const handleLocationSearchInputChange = (value) => {
     setMapSearchQuery(value);
     if (value.trim().length > 2) {
@@ -170,7 +168,6 @@ const Emergency = () => {
     }
   };
 
-  // Handle location suggestion selection
   const handleLocationSuggestionSelect = (suggestion) => {
     setMapSearchQuery(suggestion.display_name);
     setShowLocationSuggestions(false);
@@ -231,7 +228,7 @@ const Emergency = () => {
         setLoading(true);
         const res = await axios.get(BOOKING_API_URL);
         setData(res.data);
-        console.log("Loaded data:", res.data); // Debugging line
+        console.log("Loaded data:", res.data);
       } catch (e) {
         console.error("Fetch error:", e);
         toast.error("Failed to load booking data");
@@ -241,7 +238,6 @@ const Emergency = () => {
     })();
   }, []);
 
-  // Updated click outside handler
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (showEquip && equipRef.current && !equipRef.current.contains(e.target))
@@ -270,7 +266,6 @@ const Emergency = () => {
         !dropLocationRef.current.contains(e.target)
       )
         setShowDropLocationDropdown(false);
-      // Hide suggestions when clicking outside the search container
       if (
         showSuggestions &&
         searchRef.current &&
@@ -280,7 +275,6 @@ const Emergency = () => {
           setShowSuggestions(false);
         }, 150);
       }
-      // Hide location suggestions when clicking outside
       if (
         showLocationSuggestions &&
         mapSearchRef.current &&
@@ -323,7 +317,6 @@ const Emergency = () => {
     return React.createElement(icons[name] || Lucide.Activity, { size });
   };
 
-  // Enhanced suggestion generation with better location matching
   const generateSuggestions = (query) => {
     if (!data || !query.trim()) return [];
     const queryLower = query.toLowerCase().trim();
@@ -585,28 +578,30 @@ const Emergency = () => {
 
   const handlePayNow = () => {
     const booking = buildBooking();
-    setBookingData(booking);
-    console.log("Booking Data:", booking);
-    navigate("/paymentgatway", { state: { bookingData: booking } });
+    setSelectedBooking(booking);
+    setShowPaymentGateway(true);
   };
 
   const handlePaymentSuccess = async (paymentData) => {
     try {
       await axios.post(BOOKING_API_URL, {
-        ...bookingData,
+        ...selectedBooking,
         paymentId: paymentData.paymentId,
         paymentMethod: paymentData.method,
       });
       toast.success("Booking and payment completed successfully!");
       resetForm();
-      setBookingData(null);
+      setSelectedBooking(null);
+      setShowPaymentGateway(false);
     } catch {
       toast.error("Failed to complete booking and payment.");
     }
   };
 
-  const handlePaymentFailure = () => {
-    toast.error("Payment failed. Please try again.");
+  const handlePaymentFailure = (error) => {
+    console.error("Payment Failure:", error);
+    toast.error(`Payment failed: ${error.reason}. Please try again or use a different payment method.`);
+    setShowPaymentGateway(false);
   };
 
   const renderNearbyAmbulanceView = () => (
@@ -1532,130 +1527,139 @@ const Emergency = () => {
         pauseOnHover
       />
       {showLocationPopup && renderLocationPopup()}
-      <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-4 flex justify-between items-center bg-gray-800">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: "#01B07A", color: "white" }}
-            >
-              <Lucide.Ambulance size={24} />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white mb-0">
-                Ambulance Booking
-              </h1>
-              <p className="text-sm text-gray-200 mb-0">
-                Book an ambulance from AV Swasthya's trusted network
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowNearbyView(true)}
-            style={{ backgroundColor: "var(--accent-color)" }}
-            className="px-4 py-2 text-white rounded-lg hover:brightness-90 flex items-center gap-2"
-          >
-            <Lucide.MapPin size={20} />
-            <span>Near By Ambulance</span>
-          </button>
-        </div>
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex justify-center items-center w-full max-w-md mx-auto">
-            {["Details", "Confirm"].map((stepName, index) => (
-              <React.Fragment key={index}>
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`flex items-center justify-center w-10 h-10 rounded-full mb-2 transition-all ${
-                      step === index || step > index
-                        ? "text-white shadow-lg"
-                        : "bg-gray-200 text-gray-600 border border-gray-300"
-                    }`}
-                    style={
-                      step === index || step > index
-                        ? { backgroundColor: "var(--accent-color)" }
-                        : {}
-                    }
-                  >
-                    {step > index ? (
-                      <Lucide.CheckCircle2 size={20} />
-                    ) : (
-                      <span className="font-semibold">{index + 1}</span>
-                    )}
-                  </div>
-                  <p
-                    className={`text-sm font-medium transition-colors ${
-                      step === index || step > index
-                        ? "font-semibold"
-                        : "text-gray-500"
-                    }`}
-                    style={
-                      step === index || step > index
-                        ? { color: "var(--accent-color)" }
-                        : {}
-                    }
-                  >
-                    {stepName}
-                  </p>
-                </div>
-                {index < ["Details", "Confirm"].length - 1 && (
-                  <div
-                    className={`flex-1 h-1 mx-4 mb-6 rounded transition-colors`}
-                    style={
-                      step > index
-                        ? { backgroundColor: "var(--accent-color)" }
-                        : { backgroundColor: "#D1D5DB" }
-                    }
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-        <div className="px-6 py-6">{renderStep()}</div>
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between">
-          {step > 0 && (
-            <button
-              onClick={() => setStep((prev) => prev - 1)}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-            >
-              Back
-            </button>
-          )}
-          <div className={`flex gap-3 ${step === 0 ? "ml-auto" : ""}`}>
-            {step === 1 ? (
-              <>
-                <button
-                  onClick={handleSubmit}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Submit Booking
-                </button>
-                {calculateEquipmentTotal() > 0 && (
-                  <button
-                    onClick={handlePayNow}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                  >
-                    <Lucide.CreditCard size={16} /> Pay Now ₹
-                    {calculateEquipmentTotal()}
-                  </button>
-                )}
-              </>
-            ) : (
-              <button
-                onClick={() => setStep((prev) => prev + 1)}
-                disabled={!type || !cat || !pickup}
-                className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${
-                  !type || !cat || !pickup
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
+      {showPaymentGateway ? (
+        <PaymentGatewayPage
+          amount={calculateEquipmentTotal()}
+          bookingId={selectedBooking?.id}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentFailure={handlePaymentFailure}
+        />
+      ) : (
+        <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="px-6 py-4 flex justify-between items-center bg-gray-800">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: "#01B07A", color: "white" }}
               >
-                Next
+                <Lucide.Ambulance size={24} />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-white mb-0">
+                  Ambulance Booking
+                </h1>
+                <p className="text-sm text-gray-200 mb-0">
+                  Book an ambulance from AV Swasthya's trusted network
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowNearbyView(true)}
+              style={{ backgroundColor: "var(--accent-color)" }}
+              className="px-4 py-2 text-white rounded-lg hover:brightness-90 flex items-center gap-2"
+            >
+              <Lucide.MapPin size={20} />
+              <span>Near By Ambulance</span>
+            </button>
+          </div>
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex justify-center items-center w-full max-w-md mx-auto">
+              {["Details", "Confirm"].map((stepName, index) => (
+                <React.Fragment key={index}>
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`flex items-center justify-center w-10 h-10 rounded-full mb-2 transition-all ${
+                        step === index || step > index
+                          ? "text-white shadow-lg"
+                          : "bg-gray-200 text-gray-600 border border-gray-300"
+                      }`}
+                      style={
+                        step === index || step > index
+                          ? { backgroundColor: "var(--accent-color)" }
+                          : {}
+                      }
+                    >
+                      {step > index ? (
+                        <Lucide.CheckCircle2 size={20} />
+                      ) : (
+                        <span className="font-semibold">{index + 1}</span>
+                      )}
+                    </div>
+                    <p
+                      className={`text-sm font-medium transition-colors ${
+                        step === index || step > index
+                          ? "font-semibold"
+                          : "text-gray-500"
+                      }`}
+                      style={
+                        step === index || step > index
+                          ? { color: "var(--accent-color)" }
+                          : {}
+                      }
+                    >
+                      {stepName}
+                    </p>
+                  </div>
+                  {index < ["Details", "Confirm"].length - 1 && (
+                    <div
+                      className={`flex-1 h-1 mx-4 mb-6 rounded transition-colors`}
+                      style={
+                        step > index
+                          ? { backgroundColor: "var(--accent-color)" }
+                          : { backgroundColor: "#D1D5DB" }
+                      }
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+          <div className="px-6 py-6">{renderStep()}</div>
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between">
+            {step > 0 && (
+              <button
+                onClick={() => setStep((prev) => prev - 1)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Back
               </button>
             )}
+            <div className={`flex gap-3 ${step === 0 ? "ml-auto" : ""}`}>
+              {step === 1 ? (
+                <>
+                  <button
+                    onClick={handleSubmit}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    Submit Booking
+                  </button>
+                  {calculateEquipmentTotal() > 0 && (
+                    <button
+                      onClick={handlePayNow}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      <Lucide.CreditCard size={16} /> Pay Now ₹
+                      {calculateEquipmentTotal()}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  onClick={() => setStep((prev) => prev + 1)}
+                  disabled={!type || !cat || !pickup}
+                  className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 ${
+                    !type || !cat || !pickup
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  Next
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
