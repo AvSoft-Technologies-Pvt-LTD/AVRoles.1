@@ -1,20 +1,17 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import axios from "axios";
+
 const BookLab = () => {
   const { state } = useLocation();
   const { test, lab } = state || {};
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    location: "Visit Lab", address: "", date: "", time: "", fullName: "", phone: "", email: "",
-  });
+  const [form, setForm] = useState({ location: "Visit Lab", address: "", date: "", time: "", fullName: "", phone: "", email: "" });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: name === "phone" ? value.replace(/\D/g, "") : value });
-    setErrors({ ...errors, [name]: "" });
-  };
+
+  const handleChange = (e) => { const { name, value } = e.target; setForm({ ...form, [name]: name === "phone" ? value.replace(/\D/g, "") : value }); setErrors({ ...errors, [name]: "" }); };
+
   const validateForm = () => {
     const newErrors = {};
     if (!form.fullName.trim()) newErrors.fullName = "Full name is required";
@@ -27,172 +24,62 @@ const BookLab = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
   const handleSubmit = async () => {
     if (!validateForm()) return false;
     try {
       setLoading(true);
-      await axios.post("https://680b3642d5075a76d98a3658.mockapi.io/Lab/appointments",
-        { testTitle: test.title, labName: lab.name, labLocation: lab.location, testPrice: lab.price, originalPrice: lab.originalPrice, ...form });
+      await axios.post("https://680b3642d5075a76d98a3658.mockapi.io/Lab/appointments", { testTitle: test.title, labName: lab.name, labLocation: lab.location, testPrice: lab.price, originalPrice: lab.originalPrice, ...form });
       return true;
     } catch (error) {
       console.error(error);
       alert("Booking failed!");
       return false;
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
+
   const handleProceed = async () => {
     const success = await handleSubmit();
-    if (success) navigate("/patientdashboard/payment1", {
-      state: {
-        name: form.fullName, email: form.email, date: form.date, time: form.time,
-        location: form.location === "Home Collection" && test.type !== "Scan" ? form.address : lab.location,
-        amount: lab.price, testTitle: test.title, labName: lab.name, labLocation: lab.location
-      }
-    });
+    if (success) navigate("/patientdashboard/payment1", { state: { name: form.fullName, email: form.email, date: form.date, time: form.time, location: form.location === "Home Collection" && test.type !== "Scan" ? form.address : lab.location, amount: lab.price, testTitle: test.title, labName: lab.name, labLocation: lab.location } });
   };
+
   return (
-    <div className="mt-6 p-6 bg-[var(--color-surface)] shadow-lg rounded-2xl">
-      <button onClick={() => navigate(-1)} className="text-gray-600 hover:underline mb-4">
-        ← Back to Lab Details
-      </button>
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="flex-1">
-          <h4 className="h4-heading mb-6">Book Appointment</h4>
-          <div className="flex gap-4 mb-6">
-            <button
-              disabled={test.type === "Scan"}
-              className={`view-btn ${form.location === "Home Collection" ? "" : "bg-gray-200"}`}
-              onClick={() =>
-                test.type !== "Scan" && setForm({ ...form, location: "Home Collection" })
-              }
-            >
-              Home Collection
-            </button>
-            <button
-              className={`btn btn-primary ${form.location === "Visit Lab" ? "" : ""}`}
-              onClick={() => setForm({ ...form, location: "Visit Lab" })}
-            >
-              Visit Lab
-            </button>
+    <div className="mt-4 sm:mt-6 p-4 sm:p-6 bg-white shadow-lg rounded-2xl max-w-6xl mx-auto">
+      <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-gray-800 text-sm sm:text-base mb-4 flex items-center gap-1">← Back to Lab Details</button>
+      <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
+        <div className="flex-1 space-y-4 sm:space-y-6">
+          <h4 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Book Appointment</h4>
+          <div className="flex gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <button disabled={test.type === "Scan"} className={`flex-1 py-2 px-3 sm:py-2.5 sm:px-4 rounded-md text-sm sm:text-base font-medium ${form.location === "Home Collection" ? "bg-[var(--primary-color)] text-white" : "bg-gray-200 text-gray-700"}`} onClick={() => test.type !== "Scan" && setForm({ ...form, location: "Home Collection" })}>Home Collection</button>
+            <button className={`flex-1 py-2 px-3 sm:py-2.5 sm:px-4 rounded-md text-sm sm:text-base font-medium ${form.location === "Visit Lab" ? "bg-[var(--primary-color)] text-white" : "bg-gray-200 text-gray-700"}`} onClick={() => setForm({ ...form, location: "Visit Lab" })}>Visit Lab</button>
           </div>
-          {form.location === "Home Collection" && test.type !== "Scan" && (
-            <div className="mb-6">
-              <div className="floating-input relative w-full mb-4" data-placeholder="Enter your address">
-                <textarea
-                  name="address"
-                  placeholder=" "
-                  value={form.address}
-                  onChange={handleChange}
-                  className="input-field peer"
-                  rows={2}
-                />
-              </div>
-              {errors.address && (
-                <p className="text-red-500 text-sm mt-1">{errors.address}</p>
-              )}
-            </div>
-          )}
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1">
-              <div className="floating-input relative w-full mb-4" data-placeholder="Date">
-                <input
-                  type="date"
-                  name="date"
-                  value={form.date}
-                  onChange={handleChange}
-                  className="input-field peer"
-                  placeholder=" "
-                />
-              </div>
-              {errors.date && (
-                <p className="text-red-500 text-sm mt-1">{errors.date}</p>
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="floating-input relative w-full mb-4" data-placeholder="Time">
-                <input
-                  type="time"
-                  name="time"
-                  value={form.time}
-                  onChange={handleChange}
-                  className="input-field peer"
-                  placeholder=" "
-                />
-              </div>
-              {errors.time && (
-                <p className="text-red-500 text-sm mt-1">{errors.time}</p>
-              )}
-            </div>
+          {form.location === "Home Collection" && test.type !== "Scan" && <div className="mb-4 sm:mb-6"><label className="block text-sm sm:text-base font-medium text-gray-700 mb-1">Enter your address</label><textarea name="address" value={form.address} onChange={handleChange} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] text-sm sm:text-base" />{errors.address && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.address}</p>}</div>}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <div className="flex-1"><label className="block text-sm sm:text-base font-medium text-gray-700 mb-1">Date</label><input type="date" name="date" value={form.date} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] text-sm sm:text-base" />{errors.date && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.date}</p>}</div>
+            <div className="flex-1"><label className="block text-sm sm:text-base font-medium text-gray-700 mb-1">Time</label><input type="time" name="time" value={form.time} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] text-sm sm:text-base" />{errors.time && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.time}</p>}</div>
           </div>
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1 floating-input relative w-full mb-4" data-placeholder="Full Name">
-              <input
-                name="fullName"
-                placeholder=" "
-                maxLength={20}
-                value={form.fullName}
-                onChange={handleChange}
-                className="input-field peer"
-              />
-              {errors.fullName && (
-                <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
-              )}
-            </div>
-            <div className="flex-1 floating-input relative w-full mb-4" data-placeholder="Phone Number">
-              <input
-                name="phone"
-                placeholder=" "
-                maxLength={10}
-                value={form.phone}
-                onChange={handleChange}
-                className="input-field peer"
-              />
-              {errors.phone && (
-                <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-              )}
-            </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <div className="flex-1"><label className="block text-sm sm:text-base font-medium text-gray-700 mb-1">Full Name</label><input name="fullName" maxLength={20} value={form.fullName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] text-sm sm:text-base" />{errors.fullName && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.fullName}</p>}</div>
+            <div className="flex-1"><label className="block text-sm sm:text-base font-medium text-gray-700 mb-1">Phone Number</label><input name="phone" maxLength={10} value={form.phone} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] text-sm sm:text-base" />{errors.phone && <p className="text-red-500 text-xs sm:text-sm mt-1">{errors.phone}</p>}</div>
           </div>
-          <button
-            onClick={handleProceed}
-            disabled={loading}
-            className="btn btn-primary w-full"
-          >
-            {loading ? "Booking..." : "Proceed to Payment"}
-          </button>
+          <button onClick={handleProceed} disabled={loading} className="edit-btn">{loading ? "Booking..." : "Proceed to Pay"}</button>
         </div>
-        <div className="lg:w-1/3">
-          <div className="card-stat">
-            <h3 className="h4-heading mb-4">Appointment Summary</h3>
-            <div className="paragraph">
-              <p><strong>Test:</strong> {test.title}</p>
-              <p><strong>Lab:</strong> {lab.name}</p>
-              <p>
-                <strong>Location:</strong>{" "}
-                {form.location === "Home Collection" && test.type !== "Scan"
-                  ? form.address || "Home address not entered"
-                  : lab.location}
-              </p>
-              <hr className="my-2" />
-              <p><strong>Test Price:</strong> <span className="paragraph">₹{lab.price}</span></p>
-              <p>
-                <strong>Home Collection Fee:</strong>{" "}
-                <span className="paragraph">₹{form.location === "Home Collection" && test.type !== "Scan" ? "0" : "0"}</span>
-              </p>
-              <p className="h4-heading mt-4">
-                Total:{" "}
-                <span className="h4-heading">₹{lab.price}</span>
-              </p>
-            </div>
-            <div className="text-sm text-gray-500 mt-4">
-              Your report will be ready within 24-48 hours after sample
-              collection. You'll receive an email notification once it's ready.
-            </div>
+        <div className="lg:w-1/3 bg-gray-50 p-4 sm:p-6 rounded-xl shadow-sm">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Appointment Summary</h3>
+          <div className="space-y-2 text-sm sm:text-base text-gray-700">
+            <p><strong>Test:</strong> {test.title}</p>
+            <p><strong>Lab:</strong> {lab.name}</p>
+            <p><strong>Location:</strong> {form.location === "Home Collection" && test.type !== "Scan" ? form.address || "Home address not entered" : lab.location}</p>
+            <hr className="my-2 sm:my-3 border-gray-200" />
+            <p><strong>Test Price:</strong> ₹{lab.price}</p>
+            <p><strong>Home Collection Fee:</strong> ₹0</p>
+            <p className="text-lg sm:text-xl font-bold text-gray-800 mt-2 sm:mt-3">Total: <span>₹{lab.price}</span></p>
           </div>
+          <div className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">Your report will be ready within 24-48 hours after sample collection. You'll receive an email notification once it's ready.</div>
         </div>
       </div>
     </div>
   );
 };
+
 export default BookLab;

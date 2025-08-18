@@ -1,48 +1,62 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { FaCheck, FaStar, FaClock, FaMapMarkerAlt } from "react-icons/fa";
+
 const LabBooking = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { lab, test } = location.state || {};
   const iconColor = "text-[#0e1630]";
-  if (!lab || !test) return <div className="paragraph p-4">Error: No lab or test selected. Please go back and try again.</div>;
+
+  if (!lab || !test) return <div className="p-4 text-center text-gray-600">Error: No lab or test selected. Please go back and try again.</div>;
+
   const handleClick = () => navigate(`/patientdashboard/book-app/${test.id}`, { state: { lab, test } });
+
   return (
-    <div className="p-6 bg-white rounded-2xl shadow-lg space-y-6">
-      <button onClick={() => navigate(-1)} className={`${iconColor} paragraph`}>← Back to Labs List</button>
-      <div className="card-border-primary">
-        <h2 className="h4-heading">{lab.name}</h2>
-        <p className="paragraph"><FaMapMarkerAlt className={`${iconColor} inline mr-1`} /> {lab.location}</p>
-        <p className="paragraph"><FaClock className={`${iconColor} inline mr-1`} /> {lab.timings}</p>
-        <p className="paragraph text-green-600"><FaStar className="inline text-[#F4C430] mr-1" /> {lab.rating}/5</p>
-        <hr className="my-4" />
-        <h3 className="h4-heading mb-2 font-semibold">Facilities & Services</h3>
-        <ul className="paragraph space-y-1">
+    <div className="p-4 sm:p-6 bg-white rounded-2xl shadow-lg space-y-6 max-w-4xl mx-auto">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm sm:text-base text-[#0e1630] hover:text-[#0a1028]"><span>←</span> Back to Labs List</button>
+      <div className="p-4 sm:p-6 border border-gray-200 rounded-xl shadow-sm">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{lab.name}</h2>
+        <p className="text-sm sm:text-base text-gray-600 mt-2 flex items-center gap-1"><FaMapMarkerAlt className={iconColor} /> {lab.location}</p>
+        <p className="text-sm sm:text-base text-gray-600 mt-1 flex items-center gap-1"><FaClock className={iconColor} /> {lab.timings}</p>
+        <p className="text-sm sm:text-base text-green-600 mt-1 flex items-center gap-1"><FaStar className="text-[#F4C430]" /> {lab.rating}/5</p>
+        <hr className="my-4 border-gray-200" />
+        <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3">Facilities & Services</h3>
+        <ul className="space-y-2 text-sm sm:text-base text-gray-600">
           {lab.nabl && <li className="flex items-center gap-2"><FaCheck className={iconColor} /> NABL Accredited</li>}
           {lab.digitalReports && <li className="flex items-center gap-2"><FaCheck className={iconColor} /> Digital Reports</li>}
           {lab.homeCollection && <li className="flex items-center gap-2"><FaCheck className={iconColor} /> Home Collection Available</li>}
           {lab.expertPathologists && <li className="flex items-center gap-2"><FaCheck className={iconColor} /> Expert Pathologists</li>}
-        </ul></div>
-      <div className="card-stat card-border-accent">
-        <h3 className="h4-heading">Test Details</h3>
-        <p className="paragraph mb-2 font-semibold">{test.title}</p>
-        <div className="flex gap-2 mb-2">
-          <span className="input-field">{test.category}</span>
-          {test.code && <span className="input-field">Code: {test.code}</span>}</div>
-        <p className="paragraph">Report Time: {lab.reportTime}</p>
-        <p className="paragraph">{test.fasting ? `${test.fasting} hours fasting required` : "No fasting required"}</p>
+        </ul>
+      </div>
+      <div className="p-4 sm:p-6 border border-gray-200 rounded-xl shadow-sm">
+        <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3">Test Details</h3>
+        <p className="text-sm sm:text-base font-semibold text-gray-800 mb-2">{test.title}</p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          <span className="px-3 py-1 bg-gray-100 text-gray-800 text-xs sm:text-sm rounded">{test.category}</span>
+          {test.code && <span className="px-3 py-1 bg-gray-100 text-gray-800 text-xs sm:text-sm rounded">Code: {test.code}</span>}
+        </div>
+        <p className="text-sm sm:text-base text-gray-600 mb-2">Report Time: {lab.reportTime}</p>
+        <p className="text-sm sm:text-base text-gray-600 mb-3">{test.fasting ? `${test.fasting} hours fasting required` : "No fasting required"}</p>
         <div className="text-right">
-          <p className=" font-bold text-[var(--accent-color)]">₹{lab.price}</p>
-          {lab.originalPrice && (<>
-              <p className="paragraph line-through ">₹{lab.originalPrice}</p>
-              <p className="paragraph">Save ₹{lab.originalPrice - lab.price}</p>
-            </> )}</div> </div>
-      <div className="">
-        <h3 className="h4-heading font-semibold mb-2">Book Your Appointment</h3>
-        <p className="paragraph mb-4">Choose between home sample collection or visiting the lab for your <b>{test.title}</b>.</p>
-        <button onClick={handleClick} className="btn btn-primary w-full sm:w-auto">Book Appointment</button>
-        <div className="card-stat mt-4">
-          <h4 className="h4-heading">Lab Information:</h4>
-          <p className="paragraph"><strong>Lab Name:</strong> {lab.name}</p>
-          <p className="paragraph"><strong>Location:</strong> {lab.location}</p>
-        </div></div></div>);};export default LabBooking;
+          <p className="text-xl sm:text-2xl font-bold text-[var(--primary-color)]">₹{lab.price}</p>
+          {lab.originalPrice && <>
+            <p className="text-sm sm:text-base line-through text-gray-500">₹{lab.originalPrice}</p>
+            <p className="text-sm sm:text-base text-green-600">Save ₹{lab.originalPrice - lab.price}</p>
+          </>}
+        </div>
+      </div>
+      <div className="p-4 sm:p-6 border border-gray-200 rounded-xl shadow-sm space-y-4">
+        <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Book Your Appointment</h3>
+        <p className="text-sm sm:text-base text-gray-600 mb-4">Choose between home sample collection or visiting the lab for your <strong>{test.title}</strong>.</p>
+        <button onClick={handleClick} className="w-full sm:w-auto px-4 py-2 bg-[var(--primary-color)] text-white rounded-md hover:bg-[#4338CA] focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]">Book Appointment</button>
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <h4 className="text-lg font-semibold text-gray-800 mb-2">Lab Information:</h4>
+          <p className="text-sm sm:text-base text-gray-600"><strong>Lab Name:</strong> {lab.name}</p>
+          <p className="text-sm sm:text-base text-gray-600"><strong>Location:</strong> {lab.location}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LabBooking;

@@ -1,12 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Calendar, Users, UserPlus, Video, UserCheck, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from "react-router-dom";
+import { useSelector } from 'react-redux';
 import DoctorAppointments from "./Appointments";
 import { motion } from "framer-motion";
-import profile from "../../../../assets/avtar.jpg";
 
 const Overview = () => {
+  const user = useSelector((state) => state.auth.user);
   const [doctor, setDoctor] = useState(null);
   const [stats, setStats] = useState({ totalPatients: 0, opdPatients: 0, ipdPatients: 0, virtualPatients: 0 });
   const [appointments, setAppointments] = useState([]);
@@ -20,13 +22,53 @@ const Overview = () => {
     (async () => {
       setIsLoading(true);
       try {
-        const res = await axios.get('https://mocki.io/v1/b8ab8c40-958a-476b-93d6-a4be160a7ceb');
-        const { doctor, appointments, payments } = res.data;
-        setDoctor(doctor);
+        // Fetch doctor data by email
+        const doctorRes = await axios.get(`https://6801242781c7e9fbcc41aacf.mockapi.io/api/AV1/users?email=${encodeURIComponent(user?.email)}`);
+        const allDoctors = doctorRes.data;
+        const doctorData = allDoctors[0];
+        if (!doctorData) {
+          throw new Error('Doctor not found');
+        }
+
+        // Fetch dashboard data from the new URL
+        const dashboardRes = await axios.get('https://mocki.io/v1/16f62a47-cb52-4f02-b5cd-dc13feee53fe');
+        const { appointments, payments } = dashboardRes.data;
+
+        // Fetch patient data for this doctor
+        const patientsRes = await axios.get('https://681f2dfb72e59f922ef5774c.mockapi.io/addpatient');
+        const allPatients = patientsRes.data;
+
+        // Filter patients by doctor ID
+        const doctorPatients = allPatients.filter(patient => patient.doctorId === doctorData.id);
+
+        // Count patients by type
+        const patientStats = {
+          totalPatients: doctorPatients.length,
+          opdPatients: doctorPatients.filter(p => p.patientType?.toLowerCase().includes('opd')).length,
+          ipdPatients: doctorPatients.filter(p => p.patientType?.toLowerCase().includes('ipd')).length,
+          virtualPatients: doctorPatients.filter(p => p.patientType?.toLowerCase().includes('virtual')).length,
+        };
+
+        // Format doctor data for the component
+        const formattedDoctor = {
+          name: `${doctorData.firstName} ${doctorData.lastName}`,
+          specialty: doctorData.roleSpecificData.specialization,
+          qualifications: doctorData.roleSpecificData.qualification,
+          registrationId: doctorData.roleSpecificData.registrationNumber,
+          rating: 4.5,
+          reviewCount: 120,
+          currentDate: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+          photo: doctorData.photo,
+        };
+
+        setDoctor(formattedDoctor);
         setAppointments(appointments);
         const safePayments = Array.isArray(payments) ? payments : [];
-        setRevenue({ total: safePayments.reduce((s, p) => s + Number(p.amount), 0), breakdown: calculateRevenueBreakdown(safePayments) });
-        setStats(calculatePatientStats(safePayments));
+        setRevenue({
+          total: safePayments.reduce((s, p) => s + Number(p.amount), 0),
+          breakdown: calculateRevenueBreakdown(safePayments)
+        });
+        setStats(patientStats);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load dashboard data. Please try again later.');
@@ -34,28 +76,29 @@ const Overview = () => {
         setIsLoading(false);
       }
     })();
-  }, []);
-
-  const calculatePatientStats = (payments) => {
-    const s = { totalPatients: new Set(payments.map(p => p.patientName)).size, opdPatients: 0, ipdPatients: 0, virtualPatients: 0 };
-    payments.forEach(p => {
-      const t = p.serviceType?.toLowerCase() || '';
-      if (t.includes('opd')) s.opdPatients++;
-      else if (t.includes('ipd')) s.ipdPatients++;
-      else if (t.includes('virtual')) s.virtualPatients++;
-    });
-    return s;
-  };
+  }, [user?.email]);
 
   const calculateRevenueBreakdown = (payments) => {
-    const groups = {}, colors = { 'Virtual Consultation': 'text-[var(--color-overlay)]', 'Physical Consultation': 'text-[var(--color-overlay)]', 'IPD Treatment': 'text-[var(--color-overlay)]', 'OPD Treatment': 'text-[var(--color-overlay)]', 'Lab Tests': 'text-[var(--color-overlay)]', 'Other': 'text-[var(--primary-color)]-600' };
+    const groups = {}, colors = {
+      'Virtual Consultation': 'text-[var(--color-overlay)]',
+      'Physical Consultation': 'text-[var(--color-overlay)]',
+      'IPD Treatment': 'text-[var(--color-overlay)]',
+      'OPD Treatment': 'text-[var(--color-overlay)]',
+      'Lab Tests': 'text-[var(--color-overlay)]',
+      'Other': 'text-[var(--primary-color)]-600'
+    };
     payments.forEach(p => {
       const type = p.serviceType || 'Other';
       if (!groups[type]) groups[type] = { count: 0, amount: 0 };
       groups[type].count++;
       groups[type].amount += Number(p.amount);
     });
-    return Object.entries(groups).map(([type, data]) => ({ type, count: data.count, amount: data.amount, color: colors[type] || 'text-[var(--primary-color)]-600' }));
+    return Object.entries(groups).map(([type, data]) => ({
+      type,
+      count: data.count,
+      amount: data.amount,
+      color: colors[type] || 'text-[var(--primary-color)]-600'
+    }));
   };
 
   function getIconBgClass(type) {
@@ -86,11 +129,16 @@ const Overview = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.7 }}
     >
-      <motion.div className="bg-[var(--color-surface)] text-[var(--color-surface)] px-6 py-5 rounded-lg shadow-md mt-4" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.7, delay: 0.2 }}>
+      <motion.div
+        className="bg-[var(--color-surface)] text-[var(--color-surface)] px-6 py-5 rounded-lg shadow-md mt-4"
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.7, delay: 0.2 }}
+      >
         <div className="container mx-auto flex flex-col md:flex-row items-start md:items-center justify-between">
           <div className="flex items-center mb-4 md:mb-0">
             <div className="relative">
-              <img src={profile} alt={doctor.name} className="w-20 h-20 rounded-full border-2 border-[var(--accent-color)]" />
+              <img src={doctor.photo} alt={doctor.name} className="w-20 h-20 rounded-full border-2 border-[var(--accent-color)]" />
               <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 card-border-primary" />
             </div>
             <div className="ml-4">

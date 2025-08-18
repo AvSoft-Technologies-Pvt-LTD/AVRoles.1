@@ -5,17 +5,15 @@ import axios from "axios";
 import html2pdf from "html2pdf.js";
 import emailjs from "emailjs-com";
 import DynamicTable from "../../../../components/microcomponents/DynamicTable";
-import {
-  ArrowLeft, User, Stethoscope, ChevronDown, X, Printer, CheckCircle, FileText, Pill, TestTube, Mail, MessageCircle, Send, Phone, AtSign,
-} from "lucide-react";
+import { ArrowLeft, User, Stethoscope, ChevronDown, X, Printer, CheckCircle, FileText, Pill, TestTube, Mail, MessageCircle, Send, Phone, AtSign } from "lucide-react";
+import { useSelector } from "react-redux";
 
-const PrintContent = ({ requestData, selectedRecord, formData }) => (
+const PrintContent = ({ requestData, selectedRecord, formData, user }) => (
   <div style={{ fontFamily: "Arial, sans-serif", maxWidth: "800px", margin: "0 auto", padding: "20px" }}>
     <div className="header" style={{ textAlign: "center", borderBottom: "2px solid #333", paddingBottom: "20px", marginBottom: "30px" }}>
       <h1 className="h4-heading">SECOND OPINION REQUEST</h1>
       <p style={{ fontSize: "16px", color: "#666", margin: "0" }}>Expert Medical Consultation Form</p>
     </div>
-
     <div className="request-info" style={{ marginBottom: "25px", padding: "15px", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
       <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "15px", color: "#333" }}>Request Information</h3>
       <p><strong>Request ID:</strong> {requestData.id}</p>
@@ -44,17 +42,14 @@ const PrintContent = ({ requestData, selectedRecord, formData }) => (
     <div className="request-details" style={{ marginBottom: "30px" }}>
       <h3 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "15px", color: "#333", borderBottom: "1px solid #ddd", paddingBottom: "5px" }}>Consultation Request Details</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0 30px", rowGap: "10px" }}>
-        {Object.entries(formData)
-          .filter(([key]) => !["contactEmail", "contactPhone"].includes(key))
-          .map(([key, value]) => (
-            <div key={key} style={{ marginBottom: "0" }}>
-              <strong style={{ color: "#555" }}>{key.replace(/([A-Z])/g, " $1") + ":"}</strong>
-              <span style={{ color: "#01D48C", marginLeft: 8 }}>{value || "Not specified"}</span>
-            </div>
-          ))}
+        {Object.entries(formData).filter(([key]) => !["contactEmail", "contactPhone"].includes(key)).map(([key, value]) => (
+          <div key={key} style={{ marginBottom: "0" }}>
+            <strong style={{ color: "#555" }}>{key.replace(/([A-Z])/g, " $1") + ":"}</strong>
+            <span style={{ color: "#01D48C", marginLeft: 8 }}>{value || "Not specified"}</span>
+          </div>
+        ))}
       </div>
     </div>
-    {/* Medical Records Preview Section (matches print PDF) - page break before */}
     <div style={{ pageBreakBefore: 'always', breakBefore: 'page', marginTop: "40px", fontFamily: "Arial, sans-serif", maxWidth: "900px", marginLeft: "auto", marginRight: "auto" }}>
       <div style={{ padding: "24px", background: "linear-gradient(90deg, #01B07A 0%, #1A223F 100%)", color: "#fff", borderRadius: "18px 18px 0 0" }}>
         <h2 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "8px" }}>Medical Records Preview</h2>
@@ -62,7 +57,7 @@ const PrintContent = ({ requestData, selectedRecord, formData }) => (
       </div>
       <div style={{ background: "#fff", borderRadius: "0 0 18px 18px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", padding: "32px" }}>
         <div style={{ marginBottom: "24px" }}>
-          <h3 style={{ fontSize: "22px", fontWeight: "bold", color: "#1A223F", marginBottom: "12px" }}>{selectedRecord.patientName}</h3>
+          <h3 style={{ fontSize: "22px", fontWeight: "bold", color: "#1A223F", marginBottom: "12px" }}>{user?.firstName || 'N/A'} {user?.lastName || ''}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", fontSize: "15px", color: "#333" }}>
             <div>Age: {selectedRecord.age}</div>
             <div>Gender: {selectedRecord.sex}</div>
@@ -148,7 +143,7 @@ const PrintContent = ({ requestData, selectedRecord, formData }) => (
   </div>
 );
 
-const MedicalRecordsDetailsPreview = ({ selectedRecord, onClose }) => {
+const MedicalRecordsDetailsPreview = ({ selectedRecord, onClose, user }) => {
   if (!selectedRecord) return null;
   const [detailsActiveTab, setDetailsActiveTab] = useState("medical-records");
   const renderTabContent = () => {
@@ -209,13 +204,11 @@ const MedicalRecordsDetailsPreview = ({ selectedRecord, onClose }) => {
     };
     return tabContentMap[detailsActiveTab] || null;
   };
-
   const detailsTabs = [
     { id: "medical-records", label: "Medical Records", icon: FileText },
     { id: "prescriptions", label: "Prescriptions", icon: Pill },
     { id: "lab-tests", label: "Lab Tests", icon: TestTube },
   ];
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-auto m-4">
@@ -231,7 +224,7 @@ const MedicalRecordsDetailsPreview = ({ selectedRecord, onClose }) => {
             </button>
           </div>
           <div className="bg-gradient-to-r from-[#01B07A] to-[#1A223F] rounded-xl p-6 mb-6 text-white">
-            <h3 className="text-2xl font-bold mb-4">{selectedRecord.patientName}</h3>
+            <h3 className="text-2xl font-bold mb-4">{user?.firstName || 'N/A'} {user?.lastName || ''}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-6 text-sm">
               <div>Age: {selectedRecord.age}</div>
               <div>Gender: {selectedRecord.sex}</div>
@@ -304,33 +297,30 @@ const MedicalRecordsDetailsPreview = ({ selectedRecord, onClose }) => {
 const SecondOpinion = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const user = useSelector((state) => state.auth.user);
+
   const printContentRef = useRef();
   const selectedRecord = location.state?.selectedRecord || {
     patientName: "John Doe", age: "45", sex: "Male", id: "P001", hospitalName: "General Hospital", diagnosis: "Chest Pain", dateOfVisit: "2024-01-15", "K/C/O": "Hypertension", vitals: { bp: "140/90", pulse: "80", temp: "98.6" }, medicalDetails: {
       chiefComplaint: "Chest pain since 2 days", pastHistory: "Hypertension for 5 years", examination: "Tenderness over chest",
     }, prescriptionsData: [{ date: "2024-01-15", doctorName: "Dr. Smith", medicines: "Aspirin 75mg", instructions: "Once daily", }], labTestsData: [{ date: "2024-01-15", testName: "ECG", result: "Normal", normalRange: "Normal", status: "Normal", }],
   };
-
   const [formData, setFormData] = useState({ selectedDoctor: "", urgencyLevel: "", preferredMode: "", additionalNotes: "", contactEmail: "", contactPhone: "", });
   const [showMedicalRecords, setShowMedicalRecords] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSending, setIsSending] = useState({ whatsapp: false, email: false });
-
   const doctors = ["Dr. Rajesh Kumar (Cardiologist)", "Dr. Priya Sharma (Physician)", "Dr. Amit Patel (Neurologist)", "Dr. Sunita Reddy (Gastroenterologist)"];
   const urgencyLevels = [{ label: "Normal (3-5 days)", value: "normal" }, { label: "Urgent (1-2 days)", value: "urgent" }, { label: "Critical (Same day)", value: "critical" }];
   const consultationModes = [{ label: "In-person Visit", value: "in-person" }, { label: "Teleconsultation", value: "teleconsultation" }, { label: "Email Report", value: "email" }, { label: "Phone Consultation", value: "phone" }];
-
   const handleInputChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
   const handleDoctorSelect = (doctor) => { setFormData((prev) => ({ ...prev, selectedDoctor: doctor })); setIsDropdownOpen(false); };
   const handleBack = () => navigate(-1);
-  const generateRequestData = () => ({ id: `SO-${Date.now()}`, requestDate: new Date().toLocaleDateString("en-GB"), patientInfo: { Name: selectedRecord.patientName, Age: selectedRecord.age, Sex: selectedRecord.sex, patientId: selectedRecord.id, HospitalName: selectedRecord.hospitalName, Diagnosis: selectedRecord.diagnosis, VisitDate: selectedRecord.dateOfVisit || selectedRecord.dateOfAdmission || selectedRecord.dateOfConsultation, }, });
+  const generateRequestData = () => ({ id: `SO-${Date.now()}`, requestDate: new Date().toLocaleDateString("en-GB"), patientInfo: { Name: user?.firstName || 'N/A', Age: selectedRecord.age, Sex: selectedRecord.sex, patientId: selectedRecord.id, HospitalName: selectedRecord.hospitalName, Diagnosis: selectedRecord.diagnosis, VisitDate: selectedRecord.dateOfVisit || selectedRecord.dateOfAdmission || selectedRecord.dateOfConsultation, }, });
   const generateMessageContent = () => {
     const requestData = generateRequestData();
     return { subject: `Second Opinion Request - ${requestData.patientInfo.name} (${requestData.id})`, body: `SECOND OPINION REQUEST\n\nRequest Details:\n• Request ID: ${requestData.id}\n• Date: ${requestData.requestDate}\n• Status: Pending Review\n\nPatient Information:\n• Name: ${requestData.patientInfo.name}\n• Age: ${requestData.patientInfo.age}\n• Gender: ${requestData.patientInfo.sex}\n• Hospital: ${requestData.patientInfo.hospitalName}\n• Diagnosis: ${requestData.patientInfo.diagnosis}\n• Visit Date: ${requestData.patientInfo.visitDate}\n• K/C/O: ${selectedRecord["K/C/O"] ?? "--"}\n\nConsultation Request Details:\n• Selected Doctor: ${formData.selectedDoctor || "Not specified"}\n• Urgency Level: ${formData.urgencyLevel || "Not specified"}\n• Preferred Mode: ${formData.preferredMode || "Not specified"}\n• Additional Notes: ${formData.additionalNotes || "Not specified"}\n\nMedical Records: Complete patient medical history, vitals, prescriptions, and lab reports are included with this request.\n\nGenerated on: ${new Date().toLocaleString()}\nFor queries, please contact the medical records department.` };
-  }
-
-  // Generate the Medical Records Preview HTML for printing
+  };
   const generateMedicalRecordsPreviewHTML = () => {
     return `
       <div style="margin-top:40px; font-family: Arial, sans-serif; max-width: 900px; margin-left:auto; margin-right:auto;">
@@ -340,7 +330,7 @@ const SecondOpinion = () => {
         </div>
         <div style="background: #fff; border-radius: 0 0 18px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 32px;">
           <div style="margin-bottom: 24px;">
-            <h3 style="font-size: 22px; font-weight: bold; color: #1A223F; margin-bottom: 12px;">${selectedRecord.patientName}</h3>
+            <h3 style="font-size: 22px; font-weight: bold; color: #1A223F; margin-bottom: 12px;">${user?.firstName || 'N/A'} ${user?.lastName || ''}</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 15px; color: #333;">
               <div>Age: ${selectedRecord.age}</div>
               <div>Gender: ${selectedRecord.sex}</div>
@@ -423,10 +413,8 @@ const SecondOpinion = () => {
       </div>
     `;
   };
-
   const generatePrintTemplate = () => {
     const requestData = generateRequestData();
-    // Patient Info as grid
     const patientInfoGrid = `
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 30px; row-gap: 10px;">
         <div><strong>Name:</strong> <span style='color:#0E1630;'>${requestData.patientInfo.name}</span></div>
@@ -439,7 +427,6 @@ const SecondOpinion = () => {
         <div><strong>K/C/O:</strong> <span style='color:#0E1630;'>${selectedRecord["K/C/O"] ?? "--"}</span></div>
       </div>
     `;
-    // Consultation Request Details as grid
     const consultDetailsGrid = `
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 30px; row-gap: 10px;">
         <div><strong>Selected Doctor:</strong> <span style='color:#01D48C;'>${formData.selectedDoctor || "Not specified"}</span></div>
@@ -475,17 +462,14 @@ const SecondOpinion = () => {
           ${consultDetailsGrid}
         </div>
       </div>
-      <!-- Medical Records Preview Section on next page -->
       <div style="page-break-before: always; break-before: page;">
         ${generateMedicalRecordsPreviewHTML()}
       </div>
     `;
   };
-
   const generatePDF = async () => {
     const element = document.createElement("div");
     element.innerHTML = generatePrintTemplate();
-
     const opt = {
       margin: 1,
       filename: `second-opinion-${generateRequestData().id}.pdf`,
@@ -493,7 +477,6 @@ const SecondOpinion = () => {
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
     };
-
     try {
       const pdfBlob = await html2pdf().set(opt).from(element).outputPdf("blob");
       return pdfBlob;
@@ -502,7 +485,6 @@ const SecondOpinion = () => {
       throw error;
     }
   };
-
   const blobToBase64 = (blob) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -514,21 +496,17 @@ const SecondOpinion = () => {
       reader.readAsDataURL(blob);
     });
   };
-
   const sendWhatsAppMessage = async () => {
     if (!formData.contactPhone) {
       toast.error("Please enter a WhatsApp number");
       return;
     }
-
     setIsSending((prev) => ({ ...prev, whatsapp: true }));
-
     try {
       toast.info("Generating PDF...");
       const pdfBlob = await generatePDF();
       const messageContent = generateMessageContent();
       const whatsappMessage = `${messageContent.subject}\n\n${messageContent.body}\n\nPDF document has been generated and is ready for download.`;
-
       const response = await axios.get(`https://api.callmebot.com/whatsapp.php`, {
         params: {
           phone: `+91${formData.contactPhone}`,
@@ -537,10 +515,8 @@ const SecondOpinion = () => {
         },
         timeout: 15000,
       });
-
       console.log("✅ WhatsApp API Response:", response.data);
       toast.success(`WhatsApp message sent successfully to +91${formData.contactPhone}!`);
-
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement("a");
       link.href = url;
@@ -569,29 +545,23 @@ const SecondOpinion = () => {
       setIsSending((prev) => ({ ...prev, whatsapp: false }));
     }
   };
-
   const sendEmail = async () => {
     if (!formData.contactEmail.trim()) {
       toast.error("Please enter an email address");
       return;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.contactEmail)) {
       toast.error("Please enter a valid email address");
       return;
     }
-
     setIsSending((prev) => ({ ...prev, email: true }));
-
     try {
       toast.info("Generating PDF...");
       const pdfBlob = await generatePDF();
       const pdfBase64 = await blobToBase64(pdfBlob);
       const messageContent = generateMessageContent();
-
       emailjs.init("YOUR_USER_ID");
-
       const templateParams = {
         to_email: formData.contactEmail,
         to_name: selectedRecord.patientName,
@@ -600,9 +570,7 @@ const SecondOpinion = () => {
         pdf_attachment: pdfBase64,
         filename: `second-opinion-${generateRequestData().id}.pdf`,
       };
-
       const response = await emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", templateParams);
-
       if (response.status === 200) {
         console.log("✅ Email sent successfully:", response);
         toast.success(`Email with PDF sent successfully to ${formData.contactEmail}!`);
@@ -629,7 +597,6 @@ const SecondOpinion = () => {
       setIsSending((prev) => ({ ...prev, email: false }));
     }
   };
-
   const handlePrintOnly = () => {
     const printContent = generatePrintTemplate();
     const printWindow = window.open('', '_blank');
@@ -654,18 +621,17 @@ const SecondOpinion = () => {
     printWindow.print();
     printWindow.close();
   };
-
   if (showMedicalRecords) {
     return (
       <MedicalRecordsDetailsPreview
         selectedRecord={selectedRecord}
         onClose={() => setShowMedicalRecords(false)}
+         user={user}
       />
     );
   }
-
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <button onClick={handleBack} className="flex items-center gap-2 hover:text-blue-600 transition-colors text-gray-600">
         <ArrowLeft size={20} />
         <span className="font-medium">Back to Medical Record Details</span>
@@ -673,12 +639,11 @@ const SecondOpinion = () => {
       <div className="text-left mb-8">
         <div className="inline-flex items-center gap-3">
           <Stethoscope size={32} className="primary-color" />
-          <h1 className="h3-heading">Second Opinion Request</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Second Opinion Request</h1>
         </div>
       </div>
-
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
-        <div className="flex items-center justify-between">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6 mb-8">
+        <div className="flex flex-col sm:flex-row items-center justify-between">
           <div className="flex items-center gap-3">
             <CheckCircle size={24} className="text-green-600" />
             <div>
@@ -686,17 +651,17 @@ const SecondOpinion = () => {
               <p className="text-sm text-green-700">Patient information, vitals, and medical history will be included</p>
             </div>
           </div>
-          <button onClick={() => setShowMedicalRecords(true)} className="view-btn">Preview Medical Records</button>
+          <button onClick={() => setShowMedicalRecords(true)} className="mt-4 sm:mt-0 view-btn px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Preview Medical Records</button>
         </div>
       </div>
-      <div className="bg-gradient-to-r from-[#01B07A] to-[#1A223F] rounded-xl p-6 mb-8 text-white">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+      <div className="bg-gradient-to-r from-[#01B07A] to-[#1A223F] rounded-xl p-4 sm:p-6 mb-8 text-white">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 flex items-center gap-2">
           <User size={20} />
           Patient Information (Auto-attached)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <p><span className="font-semibold">Patient Name:</span> {selectedRecord.patientName}</p>
+            <p><span className="font-semibold">Patient Name:</span> {user?.firstName || 'N/A'} {user?.lastName || ''}</p>
             <p><span className="font-semibold">Age:</span> {selectedRecord.age}</p>
             <p><span className="font-semibold">Gender:</span> {selectedRecord.sex}</p>
             <p><span className="font-semibold">K/C/O:</span> {selectedRecord["K/C/O"] ?? "--"}</p>
@@ -708,8 +673,8 @@ const SecondOpinion = () => {
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Select Consulting Doctor <span className="text-red-500">*</span></label>
             <div className="relative">
@@ -736,7 +701,7 @@ const SecondOpinion = () => {
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Preferred Consultation Mode</label>
             <select value={formData.preferredMode} onChange={(e) => handleInputChange("preferredMode", e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg">
@@ -761,7 +726,7 @@ const SecondOpinion = () => {
       </div>
       <div className="flex justify-center items-center pt-6">
         <div className="flex gap-3">
-          <button onClick={() => setShowPrintPreview(true)} className="flex items-center gap-2 px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+          <button onClick={() => setShowPrintPreview(true)} className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
             <Printer size={18} />
             Print Preview & Send
           </button>
@@ -770,20 +735,20 @@ const SecondOpinion = () => {
       {showPrintPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b bg-gradient-to-r from-[#01B07A] to-[#1A223F] text-white rounded-t-2xl">
-              <h3 className="text-xl font-semibold">Second Opinion Request Preview</h3>
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b bg-gradient-to-r from-[#01B07A] to-[#1A223F] text-white rounded-t-2xl">
+              <h3 className="text-lg sm:text-xl font-semibold">Second Opinion Request Preview</h3>
               <button onClick={() => setShowPrintPreview(false)} className="text-white hover:text-gray-200 transition-colors"><X size={24} /></button>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 sm:p-6">
               <div>
                 <div className="bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden text-sm" style={{ fontFamily: "Times, serif" }}>
-                  <PrintContent requestData={generateRequestData()} selectedRecord={selectedRecord} formData={formData} />
+                  <PrintContent requestData={generateRequestData()} selectedRecord={selectedRecord} formData={formData}  user={user} />
                 </div>
               </div>
               <div className="space-y-6">
-                <h4 className="text-lg font-semibold text-gray-800">Send PDF Options</h4>
+                <h4 className="text-lg sm:text-xl font-semibold text-gray-800">Send PDF Options</h4>
                 <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Contact Information</h3>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Contact Information</h3>
                   <div className="grid grid-cols-1 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2"><Phone size={16} className="inline mr-2" />WhatsApp Number</label>

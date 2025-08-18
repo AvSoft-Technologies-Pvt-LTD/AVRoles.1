@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import axios from "axios";
 import QRCode from "qrcode";
-import { Download, Phone, User, Calendar, Mail, X } from "lucide-react";
+import { Download, Phone, X } from "lucide-react";
 import logo from "../assets/logo.png";
 
 const API_BASE_URL = "https://6801242781c7e9fbcc41aacf.mockapi.io/api/AV1";
@@ -24,34 +24,46 @@ function Healthcard({ hideLogin }) {
   const cardRef = useRef(null);
 
   useEffect(() => {
-    if (healthId) QRCode.toDataURL(healthId, { width: 128, margin: 2 }, (err, url) => {
-      if (err) return console.error("QR generation failed:", err);
-      setQrImage(url);
-    });
+    if (healthId)
+      QRCode.toDataURL(
+        healthId,
+        { width: 128, margin: 2, color: { dark: "#01D48C", light: "#FFFFFF" } },
+        (err, url) => {
+          if (err) return console.error("QR generation failed:", err);
+          setQrImage(url);
+        }
+      );
   }, [healthId]);
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/users?email=${encodeURIComponent(userEmail)}`).then((res) => {
-      if (res.data.length > 0) {
-        const userData = res.data[0];
-        console.log("User Data:", userData);
-        setUserData(userData);
-      } else {
-        alert("User not found.");
-      }
-    }).catch((err) => {
-      console.error("Error loading user profile:", err);
-      alert("Error loading user profile.");
-    });
+    axios
+      .get(`${API_BASE_URL}/users?email=${encodeURIComponent(userEmail)}`)
+      .then((res) => {
+        if (res.data.length > 0) {
+          setUserData(res.data[0]);
+        } else {
+          alert("User not found.");
+        }
+      })
+      .catch((err) => {
+        console.error("Error loading user profile:", err);
+        alert("Error loading user profile.");
+      });
   }, [userEmail]);
 
   useEffect(() => {
-    axios.get("https://mocki.io/v1/ebea6c46-479d-40cf-9d3e-245975459b93").then((res) => setRtoData(res.data)).catch((err) => console.error("Failed to fetch RTO data", err));
+    axios
+      .get("https://mocki.io/v1/ebea6c46-479d-40cf-9d3e-245975459b93")
+      .then((res) => setRtoData(res.data))
+      .catch((err) => console.error("Failed to fetch RTO data", err));
   }, []);
 
   const generateHealthId = (userData) => {
     const now = new Date();
-    const datePart = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0");
+    const datePart =
+      String(now.getFullYear()).slice(-2) +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      String(now.getDate()).padStart(2, "0");
     const stateCode = rtoData.states[userData.state] || "XX";
     const districtCode = rtoData.districts[userData.city] || "00";
     const gender = userData.gender?.charAt(0).toUpperCase() || "X";
@@ -72,9 +84,21 @@ function Healthcard({ hideLogin }) {
           localStorage.setItem("healthId", existing.healthId);
           return setIsCardGenerated(true);
         }
-        const cardData = { firstName: userData.firstName, lastName: userData.lastName, gender: userData.gender, phone: userData.phone, dob: userData.dob, aadhaar: userData.aadhaar, state: userData.state, city: userData.city, healthId: genId, email: userData.email, id: userData.id, photo: userData.photo || "" };
-        const response = await axios.post(CARD_API_URL, cardData);
-        console.log("Response from API:", response);
+        const cardData = {
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          gender: userData.gender,
+          phone: userData.phone,
+          dob: userData.dob,
+          aadhaar: userData.aadhaar,
+          state: userData.state,
+          city: userData.city,
+          healthId: genId,
+          email: userData.email,
+          id: userData.id,
+          photo: userData.photo || "",
+        };
+        await axios.post(CARD_API_URL, cardData);
         setHealthId(genId);
         localStorage.setItem("healthId", genId);
         setIsCardGenerated(true);
@@ -88,18 +112,21 @@ function Healthcard({ hideLogin }) {
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
-    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}/${d.getFullYear()}`;
   };
 
   const handleScan = () => {
     setShowModal(true);
     setModalContent("otp");
-    alert(`Dummy OTP sent to ${userData.phone}: 123456`);
+    alert(`OTP sent to ${userData.phone}: 123456`);
   };
 
   const handleVerifyOTP = () => {
     if (otp === "123456") {
-      setModalContent("info");
+      navigate("/medical-records", { state: { userData: userData, healthId: healthId } });
     } else {
       alert("Invalid OTP. Please try again.");
     }
@@ -114,69 +141,147 @@ function Healthcard({ hideLogin }) {
   if (!userData) return null;
 
   return (
-    <div className="flex flex-col items-center justify-center min-w-xl rounded-2xl bg-white px-4 py-10 gap-4">
-      <div ref={cardRef} className="relative w-[400px] h-[260px] rounded-2xl overflow-hidden shadow-xl hover:shadow-[var(--primary-color)]/20 transition-shadow duration-300 bg-gray-300">
-        <div className="flex justify-between items-center px-4 border-b border-white/20 bg-[var(--primary-color)]">
-          <img src={logo} alt="Logo" className="h-15 w-auto rounded-full" />
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-2">
-              <h1 className="text-lg mr-4 font-extrabold text-[var(--accent-color)]">AV SWASTHYA</h1>
+    <div className="flex flex-col items-center justify-center min-w-full p-2 sm:p-4">
+      {/* Health Card */}
+      <div
+        ref={cardRef}
+        className="relative w-full max-w-[320px] sm:max-w-[380px] mx-auto rounded-2xl overflow-hidden shadow-xl hover:shadow-[var(--primary-color)]/20 transition-shadow duration-300 bg-gradient-to-r from-[#0E1630] to-[#01D48C] min-h-[220px] sm:min-h-[260px]"
+      >
+        {/* Header */}
+        <div className="flex justify-between items-center p-2 border-b border-white/20">
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="Logo" className="h-8 sm:h-10 w-auto rounded-full" />
+            <div className="text-left">
+              <h1 className="text-base sm:text-lg font-extrabold text-[var(--accent-color)]">
+                DigiHealth
+              </h1>
+              <p className="text-[10px] sm:text-xs font-semibold ml-2 sm:ml-3 text-gray-300">
+                Healthcare Solutions
+              </p>
             </div>
-            <p className="text-xs ml-6 text-gray-300">Healthcare Solutions</p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row items-center justify-start p-4">
-          <div className="flex items-end justify-center p-1 mt-4 h-full">
-            <img src={userData.photo || "https://img.freepik.com/vecteurs-premium/icone-profil-avatar-par-defaut-image-utilisateur-medias-sociaux-icone-avatar-gris-silhouette-profil-vide-illustration-vectorielle_561158-3383.jpg"} alt="User" className="w-16 h-16 sm:w-20 sm:h-20 object-cover border-2 border-white" />
+
+        {/* User Info */}
+        <div className="flex flex-row items-center justify-start p-2 sm:p-4">
+          <div className="flex items-end justify-center p-1 mt-2 sm:mt-4 h-full">
+            <img
+              src={
+                userData.photo ||
+                "https://img.freepik.com/vecteurs-premium/icone-profil-avatar-par-defaut-image-utilisateur-medias-sociaux-icone-avatar-gris-silhouette-profil-vide-illustration-vectorielle_561158-3383.jpg"
+              }
+              alt="User"
+              className="w-12 h-12 sm:w-16 sm:h-16 object-cover border-2 border-white"
+            />
           </div>
-          <div className="flex-1 text-[var(--primary-color)] text-[13px] p-2 flex flex-col items-center sm:items-start">
-            <div className="font-bold leading-tight whitespace-nowrap">{userData.firstName} {userData.lastName}</div>
-            <div className="mt-1 flex items-center gap-1"><span className="text-xs text-[var(--primary-color)]/70">Mobile: </span>{userData.phone || "N/A"}</div>
-            <div className="mt-1"><span className="text-[var(--primary-color)]/70">DOB: </span>{formatDate(userData.dob)}</div>
-            <div><span className="text-xs text-[var(--primary-color)]/70">Gender: </span>{userData.gender}</div>
-          </div>
-          <div className="flex items-center justify-center mt-4">
-            {qrImage && <img src={qrImage} alt="QR Code" className="w-16 h-16 sm:w-20 sm:h-20" onClick={handleScan} />}
-          </div>
-        </div>
-        <div className="absolute bottom-4 ml-10 flex flex-col items-start gap-1 px-3 text-[var(--primary-color)] text-lg">
-          <div className="text-[#089164] font-semibold">Health ID: {healthId}</div>
-          <div className="flex items-center justify-center ml-12 gap-2 text-xs text-gray-600 mt-1">
-            <Phone className="w-3 h-3 text-[var(--primary-color)]" />
-            <span>Helpline: <span className="font-semibold text-[#089164]">1800-123-4567</span></span>
-          </div>
-        </div>
-      </div>
-      {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex justify-center items-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">{modalContent === "otp" ? "Enter OTP" : "Health Card Information"}</h2>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700"><X /></button>
+          <div className="flex-1 text-[var(--color-surface)] text-xs sm:text-sm p-1 sm:p-2 pl-2 sm:pl-4 flex flex-col items-start">
+            <div className="font-bold leading-tight whitespace-nowrap text-left">
+              {userData.firstName} {userData.lastName}
             </div>
-            {modalContent === "otp" ? (
-              <div className="flex items-center gap-8">
-                <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter OTP" className="border rounded p-2" />
-                <button onClick={handleVerifyOTP} className="px-4 py-2 bg-[var(--primary-color)] text-white rounded">Verify OTP</button>
-              </div>
-            ) : (
-              <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full">
-                <h2 className="text-xl font-bold mb-4 text-center text-[var(--accent-color)]">Health Id: {healthId}</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm"><User className="text-gray-600 mr-3" /><div><p className="text-sm text-gray-500">Name</p><p className="font-semibold text-[var(--primary-color)]">{userData.firstName} {userData.lastName}</p></div></div>
-                  <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm"><Calendar className="text-gray-600 mr-3" /><div><p className="text-sm text-gray-500">Date of Birth</p><p className="font-semibold text-[var(--primary-color)]">{formatDate(userData.dob)}</p></div></div>
-                  <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm"><Mail className="text-gray-600 mr-3" /><div><p className="text-sm text-gray-500">Gender</p><p className="font-semibold text-[var(--primary-color)]">{userData.gender}</p></div></div>
-                  <div className="flex items-center p-4 bg-gray-50 rounded-lg shadow-sm"><Phone className="text-gray-600 mr-3" /><div><p className="text-sm text-gray-500">Phone</p><p className="font-semibold text-[var(--primary-color)]">{userData.phone}</p></div></div>
-                </div>
-              </div>
+            <div className="mt-1 flex items-center gap-1">
+              <strong className="text-[10px] sm:text-xs text-[var(--color-surface)]">Mobile:</strong>
+              <span className="text-[10px] sm:text-xs">{userData.phone || "N/A"}</span>
+            </div>
+            <div className="mt-1">
+              <strong className="text-[var(--color-surface)] text-[10px] sm:text-xs">DOB: </strong>
+              <span className="text-[10px] sm:text-xs">{formatDate(userData.dob)}</span>
+            </div>
+            <div>
+              <strong className="text-[10px] sm:text-xs text-[var(--color-surface)]">Gender:</strong>
+              <span className="text-[10px] sm:text-xs">{userData.gender}</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-center mt-2 sm:mt-4">
+            {qrImage && (
+              <img
+                src={qrImage}
+                alt="QR Code"
+                className="w-14 h-14 sm:w-16 sm:h-16 cursor-pointer"
+                onClick={handleScan}
+              />
             )}
           </div>
         </div>
-      )}
-      <div className="flex gap-4">
-        <button onClick={() => { const t = document.title; document.title = "AV Health Card"; window.print(); document.title = t; }} className="flex items-center gap-2 bg-[var(--primary-color)] text-[var(--color-surface)] font-semibold py-2 px-4 rounded-lg hover:bg-[#123456]"><Download /> Download</button>
-        {!hideLogin && <button onClick={() => navigate("/login")} className="px-4 py-2 view-btn">Login</button>}
+
+        {/* Footer */}
+        <div className="absolute bottom-2 left-0 right-0 flex flex-col items-center gap-1 px-4 text-[var(--color-surface)] text-[10px] sm:text-[13px]">
+          <div className="text-[var(--color-surface)] font-semibold text-[10px] sm:text-sm">
+            Health ID: {healthId}
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2 mt-1 text-[8px] sm:text-xs">
+            <Phone className="w-3 h-3 sm:w-3 sm:h-3 text-[var(--color-surface)]" />
+            <span>
+              Helpline:{" "}
+              <span className="font-semibold text-[var(--color-surface)]">1800-123-4567</span>
+            </span>
+          </div>
+        </div>
       </div>
+
+      {/* Buttons */}
+      <div className="flex gap-2 sm:gap-4 mt-2 sm:mt-4 justify-center w-full">
+        <button
+          onClick={() => {
+            const t = document.title;
+            document.title = "AV Health Card";
+            window.print();
+            document.title = t;
+          }}
+          className="flex items-center gap-1 sm:gap-2 bg-[var(--primary-color)] text-[var(--color-surface)] font-semibold py-1 sm:py-2 px-2 sm:px-4 rounded-lg hover:bg-[#123456] text-xs sm:text-base"
+        >
+          <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+          Download
+        </button>
+        {!hideLogin && (
+          <button
+            onClick={() => navigate("/login")}
+            className="px-2 sm:px-4 py-1 sm:py-2 view-btn bg-gray-500 text-white rounded text-xs sm:text-base"
+          >
+            Login
+          </button>
+        )}
+      </div>
+
+      {/* OTP Verification Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Verify OTP</h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-gray-600 mb-4">
+              An OTP has been sent to {userData.phone}. Please enter it below.
+            </p>
+            <input
+              type="text"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              placeholder="Enter OTP"
+              className="w-full p-2 border border-gray-300 rounded mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleVerifyOTP}
+                className="px-4 py-2 bg-[var(--primary-color)] text-white rounded hover:bg-[#123456]"
+              >
+                Verify
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

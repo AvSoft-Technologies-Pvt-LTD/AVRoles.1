@@ -1,29 +1,48 @@
+
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useSelector } from 'react-redux';
 import OPDTab from "./OPDTab";
 import IPDTab from "./IPDTab";
 import VirtualTab from "./VirtualTab";
 import ReusableModal from "../../../../components/microcomponents/Modal";
 import axios from "axios";
 
-const DEFAULT_DOCTOR_NAME = "Dr.Sheetal S. Shelke";
 const OPT = {
   GENDER: ["Female", "Male", "Other"],
   BLOOD: ["A+", "B+", "O+", "AB+"],
   OCC: ["Doctor", "Engineer", "Teacher", "Student", "Retired"],
-  DEPT: ["General Medicine", "Surgery", "Cardiology", "Orthopedics", "Pediatrics", "Gynecology"],
+  DEPT: [
+    "General Medicine",
+    "Surgery",
+    "Cardiology",
+    "Orthopedics",
+    "Pediatrics",
+    "Gynecology",
+  ],
   INS: ["None", "CGHS", "ESIC", "Private Insurance", "Other"],
-  STATUS: ["Admitted", "Discharged"],
-  SURGERY: ["No", "Yes"]
+  STATUS: ["Admitted", "Under Treatment", "Discharged"],
+  SURGERY: ["No", "Yes"],
 };
+
 const API = {
   FORM: "https://681f2dfb72e59f922ef5774c.mockapi.io/addpatient",
   HD: "https://680cc0c92ea307e081d4edda.mockapi.io/personalHealthDetails",
   FD: "https://6808fb0f942707d722e09f1d.mockapi.io/FamilyData",
-  HS: "https://6808fb0f942707d722e09f1d.mockapi.io/health-summary"
+  HS: "https://6808fb0f942707d722e09f1d.mockapi.io/health-summary",
+  DOCTOR: "https://6801242781c7e9fbcc41aacf.mockapi.io/api/AV1/users",
 };
-const WARD_TYPES = ["General", "Semi-Private", "Private", "Deluxe", "ICU", "ICCU", "Special Wards"];
+
+const WARD_TYPES = [
+  "General",
+  "Semi-Private",
+  "Private",
+  "Deluxe",
+  "ICU",
+  "ICCU",
+  "Special Wards",
+];
 const WARD_NUMBERS = ["A", "B", "C", "D", "E"];
 const BED_NUMBERS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
@@ -33,37 +52,158 @@ const PATIENT_BASIC_FIELDS = [
   { name: "lastName", label: "Last Name", type: "text", required: true },
   { name: "phone", label: "Phone Number", type: "text", required: true },
   { name: "email", label: "Email Address", type: "email", required: true },
-  { name: "gender", label: "Gender", type: "select", required: true, options: OPT.GENDER.map(g => ({ value: g, label: g })) },
+  {
+    name: "gender",
+    label: "Gender",
+    type: "select",
+    required: true,
+    options: OPT.GENDER.map((g) => ({ value: g, label: g })),
+  },
   { name: "dob", label: "Date of Birth", type: "date", required: true },
-  { name: "bloodGroup", label: "Blood Group", type: "select", options: OPT.BLOOD.map(b => ({ value: b, label: b })) },
-  { name: "occupation", label: "Occupation", type: "select", required: true, options: OPT.OCC.map(o => ({ value: o, label: o })) },
-  { name: "addressPerm", label: "Permanent Address", type: "textarea", required: true },
-  { name: "sameAsPermAddress", label: "Temporary address same as permanent", type: "checkbox" },
-  { name: "addressTemp", label: "Temporary Address", type: "textarea", required: true },
-  { name: "password", label: "Create Password", type: "password", required: true },
-  { name: "confirmPassword", label: "Confirm Password", type: "password", required: true }
+  {
+    name: "bloodGroup",
+    label: "Blood Group",
+    type: "select",
+    options: OPT.BLOOD.map((b) => ({ value: b, label: b })),
+  },
+  {
+    name: "addressPerm",
+    label: "Permanent Address",
+    type: "textarea",
+    required: true,
+  },
+  {
+    name: "sameAsPermAddress",
+    label: "Temporary address same as permanent",
+    type: "checkbox",
+  },
+  {
+    name: "addressTemp",
+    label: "Temporary Address",
+    type: "textarea",
+    required: true,
+  },
+  {
+    name: "occupation",
+    label: "Occupation",
+    type: "select",
+    required: true,
+    options: OPT.OCC.map((o) => ({ value: o, label: o })),
+  },
+  {
+    name: "password",
+    label: "Create Password",
+    type: "password",
+    required: true,
+  },
+  {
+    name: "confirmPassword",
+    label: "Confirm Password",
+    type: "password",
+    required: true,
+  },
 ];
+
 
 const APPOINTMENT_FIELDS = [
   { name: "date", label: "Appointment Date", type: "date", required: true },
   { name: "time", label: "Appointment Time", type: "time", required: true },
   { name: "diagnosis", label: "Diagnosis", type: "text", required: true },
-  { name: "reason", label: "Reason for Visit", type: "select", required: true, options: [{ value: "Consultation", label: "Consultation" }, { value: "Follow-up", label: "Follow-up" }, { value: "Test", label: "Test" }, { value: "Other", label: "Other" }] }
+  {
+    name: "reason",
+    label: "Reason for Visit",
+    type: "select",
+    required: true,
+    options: [
+      { value: "Consultation", label: "Consultation" },
+      { value: "Follow-up", label: "Follow-up" },
+      { value: "Test", label: "Test" },
+      { value: "Other", label: "Other" },
+    ],
+  },
 ];
 
 const IPD_DETAILS_FIELDS = [
-  { name: "admissionDate", label: "Admission Date", type: "date", required: true },
-  { name: "admissionTime", label: "Admission Time", type: "time", required: true },
-  { name: "status", label: "Status", type: "select", required: true, options: OPT.STATUS.map(s => ({ value: s, label: s })) },
-  { name: "wardType", label: "Ward Type", type: "select", required: true, options: WARD_TYPES.map(w => ({ value: w, label: w })) },
-  { name: "wardNumber", label: "Ward Number", type: "select", required: true, options: WARD_NUMBERS.map(w => ({ value: w, label: w })) },
-  { name: "bedNumber", label: "Bed Number", type: "select", required: true, options: BED_NUMBERS.map(b => ({ value: b, label: b })) },
-  { name: "department", label: "Department", type: "select", required: true, options: OPT.DEPT.map(d => ({ value: d, label: d })) },
-  { name: "insuranceType", label: "Insurance Type", type: "select", required: true, options: OPT.INS.map(i => ({ value: i, label: i })) },
-  { name: "surgeryRequired", label: "Surgery Required", type: "select", options: OPT.SURGERY.map(s => ({ value: s, label: s })) },
+  {
+    name: "admissionDate",
+    label: "Admission Date",
+    type: "date",
+    required: true,
+  },
+  {
+    name: "admissionTime",
+    label: "Admission Time",
+    type: "time",
+    required: true,
+  },
+  {
+    name: "status",
+    label: "Status",
+    type: "select",
+    required: true,
+    options: OPT.STATUS.map((s) => ({ value: s, label: s })),
+  },
+  {
+    name: "wardType",
+    label: "Ward Type",
+    type: "select",
+    required: true,
+    options: WARD_TYPES.map((w) => ({ value: w, label: w })),
+  },
+  {
+    name: "wardNumber",
+    label: "Ward Number",
+    type: "select",
+    required: true,
+    options: WARD_NUMBERS.map((w) => ({ value: w, label: w })),
+  },
+  {
+    name: "bedNumber",
+    label: "Bed Number",
+    type: "select",
+    required: true,
+    options: BED_NUMBERS.map((b) => ({ value: b, label: b })),
+  },
+  {
+    name: "department",
+    label: "Department",
+    type: "select",
+    required: true,
+    options: OPT.DEPT.map((d) => ({ value: d, label: d })),
+  },
+  {
+    name: "insuranceType",
+    label: "Insurance Type",
+    type: "select",
+    required: true,
+    options: OPT.INS.map((i) => ({ value: i, label: i })),
+  },
+  { name: "doctorInCharge", label: "Doctor In Charge", type: "text" },
+  {
+    name: "doctorSpecialization",
+    label: "Doctor Specialization",
+    type: "text",
+  },
+  {
+    name: "treatmentPlan",
+    label: "Treatment Plan",
+    type: "textarea",
+    colSpan: 2,
+  },
+  {
+    name: "surgeryRequired",
+    label: "Surgery Required",
+    type: "select",
+    options: OPT.SURGERY.map((s) => ({ value: s, label: s })),
+  },
   { name: "dischargeDate", label: "Discharge Date", type: "date" },
   { name: "diagnosis", label: "Diagnosis", type: "text" },
-  { name: "reasonForAdmission", label: "Reason For Admission", type: "textarea", colSpan: 2 }
+  {
+    name: "reasonForAdmission",
+    label: "Reason For Admission",
+    type: "textarea",
+    colSpan: 2,
+  },
 ];
 
 const CONSULTATION_FIELDS = [
@@ -71,11 +211,36 @@ const CONSULTATION_FIELDS = [
   { name: "lastName", label: "Last Name", type: "text", required: true },
   { name: "email", label: "Email Address", type: "email", required: true },
   { name: "phone", label: "Phone Number", type: "text", required: true },
-  { name: "consultationType", label: "Consultation Type", type: "select", required: true, options: [{ value: "Video Call", label: "Video Call" }, { value: "Voice Call", label: "Voice Call" }, { value: "Chat", label: "Chat" }] },
-  { name: "scheduledDate", label: "Scheduled Date", type: "date", required: true },
-  { name: "scheduledTime", label: "Scheduled Time", type: "time", required: true },
-  { name: "duration", label: "Duration (minutes)", type: "number", required: true },
-  { name: "notes", label: "Consultation Notes", type: "textarea", colSpan: 2 }
+  {
+    name: "consultationType",
+    label: "Consultation Type",
+    type: "select",
+    required: true,
+    options: [
+      { value: "Video Call", label: "Video Call" },
+      { value: "Voice Call", label: "Voice Call" },
+      { value: "Chat", label: "Chat" },
+    ],
+  },
+  {
+    name: "scheduledDate",
+    label: "Scheduled Date",
+    type: "date",
+    required: true,
+  },
+  {
+    name: "scheduledTime",
+    label: "Scheduled Time",
+    type: "time",
+    required: true,
+  },
+  {
+    name: "duration",
+    label: "Duration (minutes)",
+    type: "number",
+    required: true,
+  },
+  { name: "notes", label: "Consultation Notes", type: "textarea", colSpan: 2 },
 ];
 
 function getCurrentDate() {
@@ -96,101 +261,223 @@ function to24Hour(t) {
 }
 
 export default function PatientList() {
-  const location = useLocation();
+  const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("OPD");
   const [patients, setPatients] = useState([]);
   const [ipdPatients, setIpdPatients] = useState([]);
   const [virtualPatients, setVirtualPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newPatientId, setNewPatientId] = useState(null);
-  const [modals, setModals] = useState({ addPatient: false, appointment: false, ipdDetails: false, scheduleConsultation: false });
+  const [modals, setModals] = useState({
+    addPatient: false,
+    appointment: false,
+    ipdDetails: false,
+    scheduleConsultation: false,
+  });
   const [patientFormData, setPatientFormData] = useState({});
-  const [appointmentFormData, setAppointmentFormData] = useState({ date: getCurrentDate(), time: getCurrentTime() });
-  const [ipdFormData, setIpdFormData] = useState({ admissionDate: getCurrentDate(), admissionTime: getCurrentTime() });
-  const [consultationFormData, setConsultationFormData] = useState({ scheduledDate: getCurrentDate(), scheduledTime: getCurrentTime(), duration: 30 });
+  const [appointmentFormData, setAppointmentFormData] = useState({
+    date: getCurrentDate(),
+    time: getCurrentTime(),
+  });
+  const [ipdFormData, setIpdFormData] = useState({
+    admissionDate: getCurrentDate(),
+    admissionTime: getCurrentTime(),
+  });
+  const [consultationFormData, setConsultationFormData] = useState({
+    scheduledDate: getCurrentDate(),
+    scheduledTime: getCurrentTime(),
+    duration: 30,
+  });
   const [patientIdInput, setPatientIdInput] = useState("");
-  const tabs = [{ label: "OPD", value: "OPD" }, { label: "IPD", value: "IPD" }, { label: "Virtual", value: "Virtual" }];
+  const [doctorName, setDoctorName] = useState("");
+
+  const tabs = [
+    { label: "OPD", value: "OPD" },
+    { label: "IPD", value: "IPD" },
+    { label: "Virtual", value: "Virtual" },
+  ];
 
   useEffect(() => {
-    fetchAllPatients();
-  }, []);
-
-  useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const tab = queryParams.get("tab");
-    if (tab) {
-      setActiveTab(tab.charAt(0).toUpperCase() + tab.slice(1));
+    const tabParam = searchParams.get("tab");
+    if (tabParam && ["OPD", "IPD", "Virtual"].includes(tabParam)) {
+      setActiveTab(tabParam);
     }
-  }, [location.search]);
+  }, [searchParams]);
 
-  const fetchAllPatients = async () => {
-    setLoading(true);
+  useEffect(() => {
+    fetchDoctorName();
+  }, [user]);
+
+  useEffect(() => {
+    if (doctorName) {
+      fetchAllPatients();
+    }
+  }, [doctorName]);
+
+  const fetchDoctorName = async () => {
+    if (!user?.email) {
+      console.error("No user email found in Redux");
+      setDoctorName("Dr. Sheetal S. Shelke");
+      return;
+    }
     try {
-      const res = await axios.get(API.FORM);
-      const allPatients = res.data.map(p => ({ ...p, name: p.name || [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" ") })).reverse();
-      const opdData = allPatients.filter(p => (!p.type || p.type.toLowerCase() === "opd") && p.doctorName === DEFAULT_DOCTOR_NAME);
-      const ipdData = allPatients.filter(p => p.type?.toLowerCase() === "ipd");
-      const virtualData = allPatients.filter(p => p.type?.toLowerCase() === "virtual" || p.consultationType);
-      setPatients(opdData.map(p => ({ ...p, datetime: `${p.appointmentDate} ${p.appointmentTime}`, temporaryAddress: p.temporaryAddress || p.addressTemp || p.address || "", address: p.address || p.temporaryAddress || p.addressTemp || "", addressTemp: p.addressTemp || p.temporaryAddress || p.address || "" })));
-      setIpdPatients(ipdData.map(p => ({ ...p, wardNo: p.wardNumber, bedNo: p.bedNumber, temporaryAddress: p.temporaryAddress || p.addressTemp || p.address || "", address: p.address || p.temporaryAddress || p.addressTemp || "", addressTemp: p.addressTemp || p.temporaryAddress || p.address || "" })));
-      setVirtualPatients(virtualData.map(p => ({ ...p, scheduledDateTime: p.scheduledDateTime || `${p.scheduledDate} ${p.scheduledTime}`, consultationStatus: p.consultationStatus || "Scheduled", duration: p.duration || 30, temporaryAddress: p.temporaryAddress || p.addressTemp || p.address || "", address: p.address || p.temporaryAddress || p.addressTemp || "", addressTemp: p.addressTemp || p.temporaryAddress || p.address || "" })));
+      const res = await axios.get(`${API.DOCTOR}?email=${encodeURIComponent(user.email)}`);
+      const users = res.data;
+      if (users.length === 0) {
+        throw new Error('No user found with the provided email');
+      }
+      const doctor = users[0];
+      const fullName = `${doctor.firstName} ${doctor.lastName}`.trim();
+      const formattedDoctorName = `Dr. ${fullName}`;
+      setDoctorName(formattedDoctorName);
     } catch (error) {
-      console.error("Error fetching patients:", error);
-      toast.error("Failed to fetch patients");
-    } finally {
-      setLoading(false);
+      console.error('Error fetching doctor name:', error);
+      setDoctorName("Dr. Sheetal S. Shelke");
     }
   };
+
+const fetchAllPatients = async () => {
+  setLoading(true);
+  try {
+    const res = await axios.get(API.FORM);
+    const allPatients = res.data
+      .map((p) => {
+        return {
+          ...p,
+          name: p.name || `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+        };
+      })
+      .reverse();
+
+    const normalizedDoctorName = doctorName.trim().toLowerCase();
+    const opdData = allPatients.filter(
+      (p) =>
+        (!p.type || p.type.toLowerCase() === "opd") &&
+        p.doctorName.trim().toLowerCase() === normalizedDoctorName
+    );
+    const ipdData = allPatients.filter(
+      (p) => p.type?.toLowerCase() === "ipd" &&
+      p.doctorName.trim().toLowerCase() === normalizedDoctorName
+    );
+    const virtualData = allPatients.filter(
+      (p) => (p.type?.toLowerCase() === "virtual" || p.consultationType) &&
+      p.doctorName.trim().toLowerCase() === normalizedDoctorName
+    );
+
+    setPatients(
+      opdData.map((p) => ({
+        ...p,
+        datetime: `${p.appointmentDate} ${p.appointmentTime}`,
+        temporaryAddress: p.temporaryAddress || p.addressTemp || p.address || "",
+        address: p.address || p.temporaryAddress || p.addressTemp || "",
+        addressTemp: p.addressTemp || p.temporaryAddress || p.address || "",
+      }))
+    );
+    setIpdPatients(
+      ipdData.map((p) => ({
+        ...p,
+        wardNo: p.wardNumber,
+        bedNo: p.bedNumber,
+        temporaryAddress: p.temporaryAddress || p.addressTemp || p.address || "",
+        address: p.address || p.temporaryAddress || p.addressTemp || "",
+        addressTemp: p.addressTemp || p.temporaryAddress || p.address || "",
+      }))
+    );
+    setVirtualPatients(
+      virtualData.map((p) => ({
+        ...p,
+        scheduledDateTime: p.scheduledDateTime || `${p.scheduledDate} ${p.scheduledTime}`,
+        consultationStatus: p.consultationStatus || "Scheduled",
+        duration: p.duration || 30,
+        temporaryAddress: p.temporaryAddress || p.addressTemp || p.address || "",
+        address: p.address || p.temporaryAddress || p.addressTemp || "",
+        addressTemp: p.addressTemp || p.temporaryAddress || p.address || "",
+      }))
+    );
+  } catch (error) {
+    console.error("Error fetching patients:", error);
+    toast.error("Failed to fetch patients");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleTabChange = (tabValue) => {
     setActiveTab(tabValue);
+    setSearchParams({ tab: tabValue });
     setNewPatientId(null);
-    navigate(`/doctordashboard/patients?tab=${tabValue}`);
   };
 
   const openModal = (modalName) => {
-    setModals(prev => ({ ...prev, [modalName]: true }));
+    setModals((prev) => ({ ...prev, [modalName]: true }));
   };
 
   const closeModal = (modalName) => {
-    setModals(prev => ({ ...prev, [modalName]: false }));
+    setModals((prev) => ({ ...prev, [modalName]: false }));
     if (modalName === "addPatient") {
       setPatientFormData({});
       setPatientIdInput("");
     }
     if (modalName === "appointment") {
-      setAppointmentFormData({ date: getCurrentDate(), time: getCurrentTime() });
+      setAppointmentFormData({
+        date: getCurrentDate(),
+        time: getCurrentTime(),
+      });
     }
     if (modalName === "ipdDetails") {
-      setIpdFormData({ admissionDate: getCurrentDate(), admissionTime: getCurrentTime() });
+      setIpdFormData({
+        admissionDate: getCurrentDate(),
+        admissionTime: getCurrentTime(),
+      });
     }
     if (modalName === "scheduleConsultation") {
-      setConsultationFormData({ scheduledDate: getCurrentDate(), scheduledTime: getCurrentTime(), duration: 30 });
+      setConsultationFormData({
+        scheduledDate: getCurrentDate(),
+        scheduledTime: getCurrentTime(),
+        duration: 30,
+      });
     }
   };
 
-  const handleFetchPatientDetails = async () => {
-    if (!patientIdInput.trim()) {
-      toast.error("Please enter a Patient ID");
-      return;
+ const handleFetchPatientDetails = async () => {
+  if (!patientIdInput.trim()) {
+    toast.error("Please enter a Patient ID");
+    return;
+  }
+  try {
+    const data = await (await fetch(API.FORM)).json();
+    const found = data.find(
+      (p) => (p.id || "").toString() === patientIdInput.trim()
+    );
+    if (found) {
+      const clean = (str) => str?.replace(/\d+/g, "").trim() || "";
+      const firstName = clean(found.firstName) || "Trupti";
+      const middleName = clean(found.middleName);
+      const lastName = clean(found.lastName) || "Chavan";
+
+      setPatientFormData({
+        ...found,
+        firstName,
+        middleName,
+        lastName,
+        name: [firstName, middleName, lastName].filter(Boolean).join(" "),
+        addressPerm: found.permanentAddress || "",
+        addressTemp: found.temporaryAddress || "",
+      });
+      toast.success(`${found.type || "Patient"} details loaded!`);
+    } else {
+      toast.info("No patient found with this ID.");
     }
-    try {
-      const data = await (await fetch(API.FORM)).json();
-      const found = data.find(p => (p.id || "").toString() === patientIdInput.trim());
-      if (found) {
-        setPatientFormData({ ...found, name: `${found.firstName || ""} ${found.middleName || ""} ${found.lastName || ""}`.trim(), addressPerm: found.permanentAddress || "", addressTemp: found.temporaryAddress || "" });
-        toast.success(`${found.type || "Patient"} details loaded!`);
-      } else {
-        toast.info("No patient found with this ID.");
-      }
-    } catch {
-      toast.error("Failed to fetch patient");
-    }
-  };
+  } catch {
+    toast.error("Failed to fetch patient");
+  }
+};
+
 
   const handlePatientFormChange = (formData) => {
-    if (formData.sameAsPermAddress) {
+    if (formData.sameAsPermAddress && formData.addressPerm) {
       formData.addressTemp = formData.addressPerm;
     }
     setPatientFormData(formData);
@@ -219,90 +506,124 @@ export default function PatientList() {
     }
   };
 
-  const handleScheduleAppointment = async (formData) => {
-    try {
-      const payload = {
-        ...patientFormData,
-        name: [patientFormData.firstName, patientFormData.middleName, patientFormData.lastName].filter(Boolean).join(" "),
-        permanentAddress: patientFormData.addressPerm,
-        temporaryAddress: patientFormData.addressTemp,
-        appointmentDate: formData.date,
-        appointmentTime: formData.time,
-        diagnosis: formData.diagnosis,
-        reason: formData.reason,
-        doctorName: DEFAULT_DOCTOR_NAME,
-        type: "OPD"
-      };
-      const response = await axios.post(API.FORM, payload);
-      toast.success("Appointment scheduled successfully!");
-      closeModal("appointment");
-      setNewPatientId(response.data.id);
-      fetchAllPatients();
-    } catch (error) {
-      console.error("Error scheduling appointment:", error);
-      toast.error("Failed to schedule appointment.");
-    }
-  };
+const handleScheduleAppointment = async (formData) => {
+  try {
+    const payload = {
+      ...patientFormData,
+      name: `${patientFormData.firstName} ${patientFormData.lastName}`.trim(),
+      permanentAddress: patientFormData.addressPerm,
+      temporaryAddress: patientFormData.addressTemp,
+      appointmentDate: formData.date,
+      appointmentTime: formData.time,
+      diagnosis: formData.diagnosis,
+      reason: formData.reason,
+      doctorName: doctorName,
+      type: "OPD",
+    };
 
-  const handleSaveIPD = async (formData) => {
-    try {
-      const patientData = {
-        ...patientFormData,
-        ...formData,
-        type: "ipd",
-        name: `${patientFormData.firstName || ""} ${patientFormData.middleName || ""} ${patientFormData.lastName || ""}`.trim(),
-        permanentAddress: formData.addressPerm || patientFormData.addressPerm,
-        temporaryAddress: formData.addressTemp || patientFormData.addressTemp,
-        admissionTime: to24Hour(formData.admissionTime),
-        wardNo: formData.wardNumber,
-        bedNo: formData.bedNumber,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      const response = await axios.post(API.FORM, patientData);
-      toast.success("Patient added to IPD successfully!");
-      closeModal("ipdDetails");
-      setNewPatientId(response.data.id);
-      fetchAllPatients();
-      setPatientFormData({});
-      setIpdFormData({ admissionDate: getCurrentDate(), admissionTime: getCurrentTime() });
-    } catch (error) {
-      toast.error("Failed to save patient");
-    }
-  };
+    const response = await axios.post(API.FORM, payload);
+    toast.success("Appointment scheduled successfully!");
+    closeModal("appointment");
+    setNewPatientId(response.data.id);
+    fetchAllPatients();
+  } catch (error) {
+    console.error("Error scheduling appointment:", error);
+    toast.error("Failed to schedule appointment.");
+  }
+};
 
-  const handleScheduleConsultation = async (formData) => {
-    try {
-      const payload = {
-        ...formData,
-        name: `${formData.firstName} ${formData.lastName}`.trim(),
-        type: "virtual",
-        scheduledDateTime: `${formData.scheduledDate} ${formData.scheduledTime}`,
-        consultationStatus: "Scheduled",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      const response = await axios.post(API.FORM, payload);
-      toast.success("Virtual consultation scheduled successfully!");
-      closeModal("scheduleConsultation");
-      setNewPatientId(response.data.id);
-      fetchAllPatients();
-    } catch (error) {
-      console.error("Error scheduling consultation:", error);
-      toast.error("Failed to schedule consultation.");
-    }
-  };
+
+const handleSaveIPD = async (formData) => {
+  try {
+    const patientData = {
+      ...patientFormData,
+      ...formData,
+      name: `${patientFormData.firstName} ${patientFormData.lastName}`.trim(),
+      type: "ipd",
+      permanentAddress: formData.addressPerm || patientFormData.addressPerm,
+      temporaryAddress: formData.addressTemp || patientFormData.addressTemp,
+      admissionTime: to24Hour(formData.admissionTime),
+      wardNo: formData.wardNumber,
+      bedNo: formData.bedNumber,
+      doctorName: doctorName,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const response = await axios.post(API.FORM, patientData);
+    toast.success("Patient added to IPD successfully!");
+    closeModal("ipdDetails");
+    setNewPatientId(response.data.id);
+    fetchAllPatients();
+    setPatientFormData({});
+    setIpdFormData({
+      admissionDate: getCurrentDate(),
+      admissionTime: getCurrentTime(),
+    });
+  } catch (error) {
+    toast.error("Failed to save patient");
+  }
+};
+
+
+const handleScheduleConsultation = async (formData) => {
+  try {
+    const payload = {
+      ...formData,
+      name: `${formData.firstName} ${formData.lastName}`.trim(),
+      type: "virtual",
+      scheduledDateTime: `${formData.scheduledDate} ${formData.scheduledTime}`,
+      consultationStatus: "Scheduled",
+      doctorName: doctorName,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const response = await axios.post(API.FORM, payload);
+    toast.success("Virtual consultation scheduled successfully!");
+    closeModal("scheduleConsultation");
+    setNewPatientId(response.data.id);
+    fetchAllPatients();
+  } catch (error) {
+    console.error("Error scheduling consultation:", error);
+    toast.error("Failed to schedule consultation.");
+  }
+};
 
   const renderActiveTab = () => {
     switch (activeTab) {
       case "OPD":
-        return <OPDTab patients={patients} loading={loading} newPatientId={newPatientId} />;
+        return (
+          <OPDTab
+            patients={patients}
+            loading={loading}
+            newPatientId={newPatientId}
+          />
+        );
       case "IPD":
-        return <IPDTab patients={ipdPatients} loading={loading} newPatientId={newPatientId} />;
+        return (
+          <IPDTab
+            patients={ipdPatients}
+            loading={loading}
+            newPatientId={newPatientId}
+          />
+        );
       case "Virtual":
-        return <VirtualTab patients={virtualPatients} loading={loading} newPatientId={newPatientId} />;
+        return (
+          <VirtualTab
+            patients={virtualPatients}
+            loading={loading}
+            newPatientId={newPatientId}
+          />
+        );
       default:
-        return <OPDTab patients={patients} loading={loading} newPatientId={newPatientId} />;
+        return (
+          <OPDTab
+            patients={patients}
+            loading={loading}
+            newPatientId={newPatientId}
+          />
+        );
     }
   };
 
@@ -332,22 +653,30 @@ export default function PatientList() {
       </div>
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-4">
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <button
               key={tab.value}
               onClick={() => handleTabChange(tab.value)}
-              className={`relative cursor-pointer flex items-center gap-1 px-4 py-2 font-medium transition-colors duration-300 ${activeTab === tab.value ? "text-[var(--primary-color)] after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-[var(--primary-color)]" : "text-gray-500 hover:text-[var(--accent-color)] before:content-[''] before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-0 before:bg-[var(--accent-color)] before:transition-all before:duration-300 hover:before:w-full"}`}
+              className={`relative cursor-pointer flex items-center gap-1 px-4 py-2 font-medium transition-colors duration-300
+                ${
+                  activeTab === tab.value
+                    ? "text-[var(--primary-color)] after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-[var(--primary-color)]"
+                    : "text-gray-500 hover:text-[var(--accent-color)] before:content-[''] before:absolute before:left-0 before:bottom-0 before:h-[2px] before:w-0 before:bg-[var(--accent-color)] before:transition-all before:duration-300 hover:before:w-full"
+                }`}
             >
               {tab.label}
             </button>
           ))}
         </div>
-        <button onClick={handleAddButtonClick} className="btn btn-primary whitespace-nowrap px-4 py-2 text-xs flex items-center gap-2">
+        <button
+          onClick={handleAddButtonClick}
+          className="btn btn-primary whitespace-nowrap px-4 py-2 text-xs flex items-center gap-2"
+        >
           {getAddButtonLabel()}
         </button>
       </div>
       {renderActiveTab()}
-      <ReusableModal
+     <ReusableModal
         isOpen={modals.addPatient}
         onClose={() => closeModal("addPatient")}
         mode="add"
@@ -405,7 +734,7 @@ export default function PatientList() {
           )
         }
       />
-      <ReusableModal
+       <ReusableModal
         isOpen={modals.appointment}
         onClose={() => closeModal("appointment")}
         mode="add"
@@ -452,8 +781,13 @@ export default function PatientList() {
         size="lg"
         extraContent={
           <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
-            <h4 className="text-sm font-semibold text-green-800 mb-2">Virtual Consultation Info</h4>
-            <p className="text-sm text-green-700">This will create a virtual consultation appointment. The patient will receive notification with joining details.</p>
+            <h4 className="text-sm font-semibold text-green-800 mb-2">
+              Virtual Consultation Info
+            </h4>
+            <p className="text-sm text-green-700">
+              This will create a virtual consultation appointment. The patient
+              will receive notification with joining details.
+            </p>
           </div>
         }
       />

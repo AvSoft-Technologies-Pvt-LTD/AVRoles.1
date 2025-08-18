@@ -14,6 +14,19 @@ const API = {
   FD: "https://6808fb0f942707d722e09f1d.mockapi.io/FamilyData",
   HS: "https://6808fb0f942707d722e09f1d.mockapi.io/health-summary",
 };
+const formatName = (firstName, middleName, lastName, name) => {
+  // If name is already provided and clean, use it
+  if (name && !/\d/.test(name)) return name;
+
+  // Clean firstName, middleName, lastName
+  const clean = (str) => str?.replace(/\d+/g, "").trim() || "";
+  const fn = clean(firstName);
+  const mn = clean(middleName);
+  const ln = clean(lastName);
+
+  // Return formatted name (no hardcoded fallback)
+  return [fn, mn, ln].filter(Boolean).join(" ");
+};
 
 const OPT = {
   STATUS: ["Admitted", "Under Treatment", "Discharged"],
@@ -65,119 +78,112 @@ export default function IPDTab({ patients, loading, newPatientId }) {
   );
 
   const ipdColumns = [
-    { header: "ID", accessor: "id" },
-    {
-      header: "Name",
-      accessor: "name",
-      clickable: true,
-      cell: (row) => (
-        <button
-          className={`cursor-pointer text-[var(--primary-color)] hover:text-[var(--accent-color)] ${
-            row.id === newPatientId
-              ? "font-bold bg-yellow-100 px-2 py-1 rounded"
-              : ""
-          }`}
-          onClick={() => viewPatientDetails(row)}
-        >
-          {row.name ||
-            `${row.firstName || ""} ${row.middleName || ""} ${
-              row.lastName || ""
-            }`
-              .replace(/\s+/g, " ")
-              .trim()}
+  { header: "ID", accessor: "id" },
+  {
+    header: "Name",
+    accessor: "name",
+    clickable: true,
+    cell: (row) => (
+      <button
+        className={`cursor-pointer text-[var(--primary-color)] hover:text-[var(--accent-color)] ${
+          row.id === newPatientId ? "font-bold bg-yellow-100 px-2 py-1 rounded" : ""
+        }`}
+        onClick={() => viewPatientDetails(row)}
+      >
+        {row.name || `${row.firstName || ""} ${row.lastName || ""}`.trim()}
+      </button>
+    ),
+  },
+  { header: "Admission", accessor: "admissionDate" },
+  {
+    header: "Status",
+    cell: (row) => (
+      <span
+        className={`status-badge ${
+          row.status === "Admitted"
+            ? "status-admitted"
+            : row.status === "Under Treatment"
+            ? "status-pending"
+            : "status-discharged"
+        }`}
+      >
+        {row.status}
+      </span>
+    ),
+  },
+  { header: "Diagnosis", accessor: "diagnosis" },
+  {
+    header: "Ward",
+    cell: (row) =>
+      showAdditionalDetails
+        ? [row.wardType, row.wardNo, row.bedNo].filter(Boolean).join("-")
+        : "N/A",
+  },
+  {
+    header: "Discharge",
+    accessor: "dischargeDate",
+    cell: (row) => row.dischargeDate || "-",
+  },
+  {
+    header: "Actions",
+    cell: (row) => (
+      <div className="flex items-center gap-3">
+        <button onClick={() => handleAddRecord(row)} className="edit-btn">
+          Visit Pad
         </button>
-      ),
-    },
-    { header: "Admission", accessor: "admissionDate" },
-    {
-      header: "Status",
-      cell: (row) => (
-        <span
-          className={`status-badge ${
-            row.status === "Admitted"
-              ? "status-admitted"
-              : row.status === "Under Treatment"
-              ? "status-pending"
-              : "status-discharged"
-          }`}
-        >
-          {row.status}
-        </span>
-      ),
-    },
-    { header: "Diagnosis", accessor: "diagnosis" },
-    {
-      header: "Ward",
-      cell: (row) =>
-        showAdditionalDetails
-          ? [row.wardType, row.wardNo, row.bedNo].filter(Boolean).join("-")
-          : "N/A",
-    },
-    {
-      header: "Discharge",
-      accessor: "dischargeDate",
-      cell: (row) => row.dischargeDate || "-",
-    },
-    {
-      header: "Actions",
-      cell: (row) => (
-        <div className="flex items-center gap-3">
-          <button onClick={() => handleAddRecord(row)} className="edit-btn">
-            Add Record
-          </button>
-          <TeleConsultFlow phone={row.phone} />
-          <button
-            title="View Medical Record"
-            onClick={() => {
-              let age = "";
-              if (row.dob) {
-                const dobDate = new Date(row.dob);
-                const today = new Date();
-                age = today.getFullYear() - dobDate.getFullYear();
-                const m = today.getMonth() - dobDate.getMonth();
-                if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
-                  age--;
-                }
+        <TeleConsultFlow phone={row.phone} />
+        <button
+          title="View Medical Record"
+          onClick={() => {
+            let age = "";
+            if (row.dob) {
+              const dobDate = new Date(row.dob);
+              const today = new Date();
+              age = today.getFullYear() - dobDate.getFullYear();
+              const m = today.getMonth() - dobDate.getMonth();
+              if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+                age--;
               }
-              navigate("/doctordashboard/medical-record", {
-                state: {
-                  patientName: row.name,
-                  email: row.email || "",
-                  phone: row.phone || "",
-                  gender: row.gender || row.sex || "",
-                  temporaryAddress:
-                    row.temporaryAddress ||
-                    row.addressTemp ||
-                    row.address ||
-                    "",
-                  address:
-                    row.address ||
-                    row.temporaryAddress ||
-                    row.addressTemp ||
-                    "",
-                  addressTemp:
-                    row.addressTemp ||
-                    row.temporaryAddress ||
-                    row.address ||
-                    "",
-                  dob: row.dob || "",
-                  age: age,
-                  bloodType: row.bloodGroup || row.bloodType || "",
-                  regNo: row.regNo || "2025/072/0032722",
-                  mobileNo: row.mobileNo || row.phone || "",
-                  department: row.department || "Ophthalmology",
-                },
-              });
-            }}
-            className="text-blue-600 hover:text-blue-800"
-            style={{ display: "flex", alignItems: "center" }}
-          >
-            <FaNotesMedical />
-          </button>
-        </div>
-      ),
-    },
-  ];
+            }
+            navigate("/doctordashboard/medical-record", {
+              state: {
+                patientName: row.name || `${row.firstName || ""} ${row.lastName || ""}`.trim(),
+                email: row.email || "",
+                phone: row.phone || "",
+                gender: row.gender || row.sex || "",
+                temporaryAddress:
+                  row.temporaryAddress ||
+                  row.addressTemp ||
+                  row.address ||
+                  "",
+                address:
+                  row.address ||
+                  row.temporaryAddress ||
+                  row.addressTemp ||
+                  "",
+                addressTemp:
+                  row.addressTemp ||
+                  row.temporaryAddress ||
+                  row.address ||
+                  "",
+                dob: row.dob || "",
+                age: age,
+                bloodType: row.bloodGroup || row.bloodType || "",
+                regNo: row.regNo || "2025/072/0032722",
+                mobileNo: row.mobileNo || row.phone || "",
+                department: row.department || "Ophthalmology",
+              },
+            });
+          }}
+          className="text-blue-600 hover:text-blue-800"
+          style={{ display: "flex", alignItems: "center" }}
+        >
+          <FaNotesMedical />
+        </button>
+      </div>
+    ),
+  },
+];
 
   const ipdFilters = [
     {

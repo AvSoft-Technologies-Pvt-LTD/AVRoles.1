@@ -1,3 +1,4 @@
+//Reusable Modal
 //Modal.jsx 
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
@@ -57,7 +58,21 @@ const ReusableModal = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [doctorSignature, setDoctorSignature] = useState("");
   const [currentFields, setCurrentFields] = useState(fields);
+  const [suggestions, setSuggestions] = useState({});
   const signaturePadRef = useRef();
+  const modalRef = useRef();
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setSuggestions({});
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen && ["add", "edit"].includes(mode)) {
@@ -90,11 +105,28 @@ const ReusableModal = ({
     setDoctorSignature("");
   };
 
+
   const handleChange = (name, value) => {
     const updated = { ...formValues, [name]: value };
     setFormValues(updated);
     setFormErrors((p) => ({ ...p, [name]: undefined }));
     onChange?.(updated);
+  };
+
+  const handleInputChange = (e, field) => {
+    const value = e.target.value;
+    handleChange(field.name, value);
+    if (field.suggestions) {
+      const filteredSuggestions = field.suggestions.filter((suggestion) =>
+        suggestion.toLowerCase().includes(value.toLowerCase())
+      );
+      setSuggestions({ ...suggestions, [field.name]: filteredSuggestions });
+    }
+  };
+
+  const handleSuggestionClick = (fieldName, suggestion) => {
+    handleChange(fieldName, suggestion);
+    setSuggestions({ ...suggestions, [fieldName]: [] });
   };
 
   const handleSave = async () => {
@@ -118,6 +150,7 @@ const ReusableModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <motion.div
+        ref={modalRef}
         initial={{ opacity: 0, y: 100, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 50, scale: 0.95 }}
@@ -396,9 +429,7 @@ const ReusableModal = ({
                                     type={field.type || "text"}
                                     name={field.name}
                                     value={formValues[field.name] || ""}
-                                    onChange={(e) =>
-                                      handleChange(field.name, e.target.value)
-                                    }
+                                    onChange={(e) => handleInputChange(e, field)}
                                     readOnly={field.readonly}
                                     className={`peer px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 ${
                                       field.isDuration
@@ -410,6 +441,19 @@ const ReusableModal = ({
                                     max={field.max}
                                     step={field.step}
                                   />
+                                  {suggestions[field.name]?.length > 0 && (
+                                    <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded bg-white shadow">
+                                      {suggestions[field.name].map((suggestion, index) => (
+                                        <li
+                                          key={index}
+                                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                          onClick={() => handleSuggestionClick(field.name, suggestion)}
+                                        >
+                                          {suggestion}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
                                   {field.unit && (
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">
                                       {field.unit}

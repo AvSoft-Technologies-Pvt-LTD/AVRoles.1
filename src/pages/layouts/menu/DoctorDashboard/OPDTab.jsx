@@ -1,7 +1,5 @@
-//OPDTab.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import { FiExternalLink } from "react-icons/fi";
 import DynamicTable from "../../../../components/microcomponents/DynamicTable";
 import Pagination from "../../../../components/Pagination";
@@ -14,6 +12,7 @@ const API = {
   FD: "https://6808fb0f942707d722e09f1d.mockapi.io/FamilyData",
   HS: "https://6808fb0f942707d722e09f1d.mockapi.io/health-summary",
 };
+
 const VIEW_PATIENT_FIELDS = [
   { key: "name", label: "Patient Name", titleKey: true },
   { key: "id", label: "Patient ID", subtitleKey: true },
@@ -27,6 +26,19 @@ const VIEW_PATIENT_FIELDS = [
   { key: "bloodGroup", label: "Blood Group" },
   { key: "addressTemp", label: "Address" },
 ];
+const formatName = (firstName, middleName, lastName, name) => {
+  // If name is already provided and clean, use it
+  if (name && !/\d/.test(name)) return name;
+
+  // Clean firstName, middleName, lastName
+  const clean = (str) => str?.replace(/\d+/g, "").trim() || "";
+  const fn = clean(firstName);
+  const mn = clean(middleName);
+  const ln = clean(lastName);
+
+  // Return formatted name (no hardcoded fallback)
+  return [fn, mn, ln].filter(Boolean).join(" ");
+};
 
 export default function OPDTab({ patients, loading, newPatientId }) {
   const navigate = useNavigate();
@@ -35,7 +47,11 @@ export default function OPDTab({ patients, loading, newPatientId }) {
   const [family, setFamily] = useState([]);
   const [vitals, setVitals] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [modals, setModals] = useState({ viewPatient: false });
+  const [highlightedIds, setHighlightedIds] = useState([]);
+  const [modals, setModals] = useState({
+    viewPatient: false,
+  });
+
   const pageSize = 6;
   const totalPages = Math.ceil(patients.length / pageSize);
   const paginatedPatients = patients.slice(
@@ -43,90 +59,139 @@ export default function OPDTab({ patients, loading, newPatientId }) {
     currentPage * pageSize
   );
 
+  useEffect(() => {
+    const storedHighlightedIds = JSON.parse(
+      localStorage.getItem("highlightOPDIds") || "[]"
+    );
+    setHighlightedIds(storedHighlightedIds);
+  }, []);
+
+  const handlePatientClick = (patientId) => {
+    setHighlightedIds((prev) => {
+      const updated = prev.filter((id) => id !== patientId);
+      localStorage.setItem("highlightOPDIds", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleRowClick = (row) => {
+    handlePatientClick(row.id);
+  };
+
+  const handleNameClick = (row) => {
+    viewPatientDetails(row);
+  };
+
   const opdColumns = [
-    { header: "ID", accessor: "id" },
-    {
-      header: "Name",
-      accessor: "name",
-      clickable: true,
-      cell: (row) => (
+  { header: "ID", accessor: "id" },
+  {
+    header: "Name",
+    accessor: "name",
+    cell: (row) => (
+      <button
+        className={`cursor-pointer ${
+          row.id === newPatientId || highlightedIds.includes(row.id)
+            ? "text-green-600 font-bold"
+            : "text-[var(--primary-color)] font-bold hover:text-[var(--accent-color)]"
+        }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleNameClick(row);
+        }}
+      >
+        {row.name || `${row.firstName || ""} ${row.lastName || ""}`.trim()}
+      </button>
+    ),
+  },
+  { header: "Diagnosis", accessor: "diagnosis" },
+  { header: "Date & Time", accessor: "datetime" },
+  {
+    header: "Actions",
+    cell: (row) => (
+      <div className="flex items-center gap-3">
         <button
-          className={`cursor-pointer text-[var(--primary-color)] hover:text-[var(--accent-color)] ${
-            row.id === newPatientId
-              ? "font-bold bg-yellow-100 px-2 py-1 rounded"
-              : ""
-          }`}
-          onClick={() => viewPatientDetails(row)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleAddRecord(row);
+          }}
+          className="edit-btn"
         >
-          {row.name}
+          Visit Pad
         </button>
-      ),
-    },
-    { header: "Diagnosis", accessor: "diagnosis" },
-    { header: "Date & Time", accessor: "datetime" },
-    {
-      header: "Actions",
-      cell: (row) => (
-        <div className="flex items-center gap-3">
-          <button onClick={() => handleAddRecord(row)} className="edit-btn">
-            Visit Pad
-          </button>
-          <TeleConsultFlow phone={row.phone} />
-          <button
-            title="View Medical Record"
-            onClick={() => {
-              let age = "";
-              if (row.dob) {
-                const dobDate = new Date(row.dob);
-                const today = new Date();
-                age = today.getFullYear() - dobDate.getFullYear();
-                const m = today.getMonth() - dobDate.getMonth();
-                if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
-                  age--;
-                }
+        <TeleConsultFlow phone={row.phone} />
+        <button
+          title="View Medical Record"
+          onClick={(e) => {
+            e.stopPropagation();
+            let age = "";
+            if (row.dob) {
+              const dobDate = new Date(row.dob);
+              const today = new Date();
+              age = today.getFullYear() - dobDate.getFullYear();
+              const m = today.getMonth() - dobDate.getMonth();
+              if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+                age--;
               }
-              navigate("/doctordashboard/medical-record", {
-                state: {
-                  patientName: row.name,
+            }
+            navigate("/doctordashboard/medical-record", {
+              state: {
+                patientName: row.name || `${row.firstName || ""} ${row.lastName || ""}`.trim(),
+                patientId: row.id,
+                email: row.email || "",
+                phone: row.phone || "",
+                gender: row.gender || row.sex || "",
+                dob: row.dob || "",
+                diagnosis: row.diagnosis || "",
+                datetime: row.datetime || "",
+                temporaryAddress:
+                  row.temporaryAddress ||
+                  row.addressTemp ||
+                  row.address ||
+                  "",
+                address:
+                  row.address ||
+                  row.temporaryAddress ||
+                  row.addressTemp ||
+                  "",
+                addressTemp:
+                  row.addressTemp ||
+                  row.temporaryAddress ||
+                  row.address ||
+                  "",
+                age: age,
+                patientData: {
+                  id: row.id,
+                  name: row.name || `${row.firstName || ""} ${row.lastName || ""}`.trim(),
                   email: row.email || "",
                   phone: row.phone || "",
                   gender: row.gender || row.sex || "",
-                  temporaryAddress:
-                    row.temporaryAddress ||
-                    row.addressTemp ||
-                    row.address ||
-                    "",
-                  address:
-                    row.address ||
-                    row.temporaryAddress ||
-                    row.addressTemp ||
-                    "",
-                  addressTemp:
-                    row.addressTemp ||
-                    row.temporaryAddress ||
-                    row.address ||
-                    "",
-                  dob: row.dob,
+                  dob: row.dob || "",
+                  diagnosis: row.diagnosis || "",
+                  datetime: row.datetime || "",
                   age: age,
+                  bloodGroup: row.bloodGroup || "",
+                  reason: row.reason || "",
+                  address: row.address || row.temporaryAddress || row.addressTemp || "",
                 },
-              });
-            }}
-            className="text-blue-600 hover:text-blue-800"
-            style={{ display: "flex", alignItems: "center" }}
-          >
-            <FiExternalLink />
-          </button>
-        </div>
-      ),
-    },
-  ];
-
+              },
+            });
+          }}
+          className="text-blue-600 hover:text-blue-800"
+          style={{ display: "flex", alignItems: "center" }}
+        >
+          <FiExternalLink />
+        </button>
+      </div>
+    ),
+  },
+];
   const openModal = (modalName, data = null) => {
     setModals((prev) => ({ ...prev, [modalName]: true }));
     if (modalName === "viewPatient" && data) {
-      setSelectedPatient(data);
+      setSelectedPatient({ ...data, name: formatName(data.firstName) }); // Format name before setting
     }
   };
+
   const closeModal = (modalName) => {
     setModals((prev) => ({ ...prev, [modalName]: false }));
     if (modalName === "viewPatient") {
@@ -186,23 +251,23 @@ export default function OPDTab({ patients, loading, newPatientId }) {
   const handleAddRecord = (patient) => {
     navigate("/doctordashboard/form", { state: { patient } });
   };
-  const handleCellClick = (row, column) => {
-    if (column.accessor === "name") {
-      viewPatientDetails(row);
-    }
-  };
 
   return (
     <div className="space-y-4">
       <DynamicTable
         columns={opdColumns}
         data={paginatedPatients}
-        onCellClick={handleCellClick}
+        onRowClick={handleRowClick}
         filters={[]}
         tabs={[]}
         tabActions={[]}
         activeTab=""
         onTabChange={() => {}}
+        rowClassName={(row) =>
+          row.id === newPatientId || highlightedIds.includes(row.id)
+            ? "bg-green-100 animate-pulse"
+            : ""
+        }
       />
       <div className="w-full flex justify-end mt-4">
         <Pagination
@@ -216,7 +281,9 @@ export default function OPDTab({ patients, loading, newPatientId }) {
         onClose={() => closeModal("viewPatient")}
         mode="viewProfile"
         title="Patient Details"
-        viewFields={VIEW_PATIENT_FIELDS}
+        viewFields={VIEW_PATIENT_FIELDS.map(field =>
+          field.key === "name" ? { ...field, label: "Formatted Name" } : field
+        )}
         data={selectedPatient || {}}
         extraContent={
           <div className="space-y-4">
@@ -256,7 +323,7 @@ export default function OPDTab({ patients, loading, newPatientId }) {
                 <div className="space-y-2">
                   {family.map((member, i) => (
                     <div key={i} className="text-sm">
-                      <strong>{member.name}</strong> ({member.relation}) -{" "}
+                      <strong>{formatName(member.firstName)}</strong> ({member.relation}) -{" "}
                       {member.diseases?.join(", ") || "No diseases"}
                     </div>
                   ))}

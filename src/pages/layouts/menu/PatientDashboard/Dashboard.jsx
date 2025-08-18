@@ -17,7 +17,6 @@ const initialUserData = {
   familyHistory: { diabetes: false, cancer: false, heartDisease: false, mentalHealth: false, disability: false },
   familyMembers: [], additionalDetails: { provider: '', policyNumber: '', coverageType: '', startDate: '', endDate: '', coverageAmount: '', primaryHolder: false }
 };
-
 const defaultFamilyMember = { name: '', relation: '', number: '', diseases: [], email: '' };
 
 const getProgressColor = (completion) =>
@@ -39,7 +38,6 @@ function Dashboard() {
   const [editFamilyMember, setEditFamilyMember] = useState(null);
   const [profileData, setProfileData] = useState({ name: '', firstName: '', lastName: '', gender: '', dob: '', phone: '', photo: '' });
 
-  // Base personal fields without conditional ones
   const basePersonalFields = [
     { name: 'height', label: 'Height (cm)', type: 'number', colSpan: 1 },
     { name: 'weight', label: 'Weight (kg)', type: 'number', colSpan: 1 },
@@ -51,11 +49,8 @@ function Dashboard() {
     { name: 'isTobaccoUser', label: 'Do you use tobacco?', type: 'checkbox', colSpan: 1 }
   ];
 
-  // Function to get conditional personal fields based on form values
   const getPersonalFields = (formValues) => {
     const fields = [...basePersonalFields];
-
-    // Add duration fields only if corresponding checkbox is checked
     if (formValues.isSmoker) {
       fields.push({
         name: 'smokingDuration',
@@ -68,7 +63,6 @@ function Dashboard() {
         className: 'min-w-[180px] h-12 text-sm px-3 rounded border'
       });
     }
-
     if (formValues.isAlcoholic) {
       fields.push({
         name: 'alcoholDuration',
@@ -81,7 +75,6 @@ function Dashboard() {
         className: 'min-w-[180px] h-12 text-sm px-3 rounded border'
       });
     }
-
     if (formValues.isTobaccoUser) {
       fields.push({
         name: 'tobaccoDuration',
@@ -94,7 +87,6 @@ function Dashboard() {
         className: 'min-w-[180px] h-12 text-sm px-3 rounded border'
       });
     }
-
     return fields;
   };
 
@@ -125,31 +117,31 @@ function Dashboard() {
     { name: 'endDate', label: 'End Date', type: 'date', colSpan: 1.5 },
   ];
 
-useEffect(() => {
-  const fetchProfileData = async () => {
-    if (!user?.email) return;
-    try {
-      const res = await axios.get(`${PROFILE_API_URL}?email=${encodeURIComponent(user.email)}`);
-      const profile = res.data[0];
-      if (profile) {
-        const firstName = profile.firstName || '';
-        const lastName = profile.lastName || '';
-        setProfileData({
-          name: `${firstName} ${lastName}`.trim(),
-          firstName,
-          lastName,
-          dob: profile.dob || '',
-          gender: profile.gender || '',
-          phone: profile.phone || '',
-          photo: profile.photo || null // Ensure photo is correctly set
-        });
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      if (!user?.email) return;
+      try {
+        const res = await axios.get(`${PROFILE_API_URL}?email=${encodeURIComponent(user.email)}`);
+        const profile = res.data[0];
+        if (profile) {
+          const firstName = profile.firstName || '';
+          const lastName = profile.lastName || '';
+          setProfileData({
+            name: `${firstName} ${lastName}`.trim(),
+            firstName,
+            lastName,
+            dob: profile.dob || '',
+            gender: profile.gender || '',
+            phone: profile.phone || '',
+            photo: profile.photo || null
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile data:', err);
       }
-    } catch (err) {
-      console.error('Failed to fetch profile data:', err);
-    }
-  };
-  fetchProfileData();
-}, [user]);
+    };
+    fetchProfileData();
+  }, [user]);
 
   const showFeedback = (message, type = 'success') => {
     setFeedbackMessage({ show: true, message, type });
@@ -157,13 +149,12 @@ useEffect(() => {
   };
 
   const handleEditClick = () => navigate('/patientdashboard/settings');
-  const handleGenerateCard = () => {
-    setShowHealthCardModal(true);
-  };
+  const handleGenerateCard = () => setShowHealthCardModal(true);
+
   const getSectionCompletionStatus = () => ({
     basic: true,
     personal: Boolean(userData.height && userData.weight && userData.bloodGroup),
-    family: Array.isArray(userData.familyMembers) && userData.familyMembers.length > 0
+    family: Array.isArray(userData.familyMembers) && userData.familyMembers.length > 0,
   });
 
   const saveUserData = async (updatedData) => {
@@ -184,7 +175,6 @@ useEffect(() => {
       email: user.email,
       name: `${user?.firstName || 'Guest'} ${user?.lastName || ''}`.trim()
     };
-
     try {
       if (!updatedData.id) {
         const res = await axios.post(PERSONAL_API_URL, payload);
@@ -208,7 +198,6 @@ useEffect(() => {
     setActiveSection(section);
     setShowModal(true);
     setModalMode(data && section === 'family' ? 'edit' : 'edit');
-
     if (section === 'personal') {
       const currentData = userData;
       setModalFields(getPersonalFields(currentData));
@@ -220,7 +209,6 @@ useEffect(() => {
       setModalFields(additionalFields);
       setModalData(userData.additionalDetails);
     }
-
     setModalTitle(section === 'personal' ? 'Personal Health Details' : section === 'family' ? (data ? 'Edit Family Member' : 'Add Family Member') : 'Additional Details');
     if (section === 'family') setEditFamilyMember(data);
   };
@@ -238,7 +226,6 @@ useEffect(() => {
       if (!formValues.isSmoker) cleanedValues.smokingDuration = '';
       if (!formValues.isAlcoholic) cleanedValues.alcoholDuration = '';
       if (!formValues.isTobaccoUser) cleanedValues.tobaccoDuration = '';
-
       await saveUserData({ ...userData, ...cleanedValues });
       setProfileData(prev => ({
         ...prev,
@@ -267,12 +254,9 @@ useEffect(() => {
     if (activeSection === 'family' && formValues?.id) {
       const deleteUrl = `${FAMILY_API_URL}/${formValues.id}`;
       try {
-        console.log("Attempting to delete:", deleteUrl);
         await axios.delete(deleteUrl);
-
         const res = await axios.get(`${FAMILY_API_URL}?email=${user.email}`);
         setUserData(prev => ({ ...prev, familyMembers: res.data }));
-
         showFeedback('Family member deleted');
       } catch (err) {
         console.error("Delete failed", err);
@@ -321,89 +305,104 @@ useEffect(() => {
   const sections = [
     { id: 'basic', name: 'Basic Details', icon: 'user' },
     { id: 'personal', name: 'Personal Health', icon: 'heart' },
-    { id: 'family', name: 'Family Details', icon: 'users' }
+    { id: 'family', name: 'Family Details', icon: 'users' },
+    { id: 'additional', name: 'Additional Details', icon: 'clipboard' }
   ];
 
   const completionStatus = getSectionCompletionStatus();
 
   return (
-    <div className="min-h-screen">
-        <div className="bg-gradient-to-r from-[#0e1630] via-[#1b2545] to-[#038358] text-white p-4 rounded-xl flex flex-col sm:flex-row sm:items-center gap-4 shadow-lg w-full">
-<div className="relative w-20 h-20 sm:w-24 sm:h-24">
-  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
-    <circle className="text-gray-300" stroke="currentColor" strokeWidth="2" fill="none" r="16" cx="18" cy="18" />
-    <circle
-      stroke={getProgressColor(profileCompletion || 0)}
-      strokeWidth="2"
-      strokeDasharray="100"
-      strokeDashoffset={100 - (profileCompletion || 0)}
-      strokeLinecap="round"
-      fill="none"
-      r="16"
-      cx="18"
-      cy="18"
-    />
-  </svg>
-  <div className="absolute inset-2 flex items-center justify-center">
-    {profileData?.photo ? (
-      <img src={profileData.photo} alt="Profile" className="w-full h-full object-cover rounded-full" />
-    ) : (
-      <CircleUser className="w-16 h-16 text-gray-500" />
-    )}
-  </div>
-  <div className="absolute bottom-0 right-0 bg-yellow-400 text-black px-2 py-1 text-xs font-bold rounded-full">
-    {profileCompletion}%
-  </div>
-</div>
-      <div className="flex flex-row flex-wrap gap-3 sm:gap-4 items-center flex-1 min-w-0">
-        {[
-          { label: "Name", value: `${profileData.firstName || "Guest"} ${profileData.lastName || ""}`.trim() },
-          { label: "Date of Birth", value: profileData.dob || "N/A" },
-          { label: "Gender", value: profileData.gender || "N/A" },
-          { label: "Phone No.", value: profileData.phone || "N/A" },
-          { label: "Blood Group", value: profileData.bloodGroup || "N/A" },
-        ].map((item, i) => (
-          <div key={i} className="flex flex-col whitespace-nowrap sm:text-base">
-            <span className="text-[#01D48C]  truncate">{item.label}</span>
-            <span className="text-gray-200 truncate">{item.value}</span>
+    <div className="min-h-screen p-2 sm:p-4">
+      {/* Profile Card */}
+      <div className="bg-gradient-to-r from-[#0e1630] via-[#1b2545] to-[#038358] text-white p-3 sm:p-4 rounded-xl flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 shadow-lg w-full">
+        <div className="relative w-16 h-16 sm:w-20 sm:h-20">
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36">
+            <circle className="text-gray-300" stroke="currentColor" strokeWidth="2" fill="none" r="16" cx="18" cy="18" />
+            <circle
+              stroke={getProgressColor(profileCompletion || 0)}
+              strokeWidth="2"
+              strokeDasharray="100"
+              strokeDashoffset={100 - (profileCompletion || 0)}
+              strokeLinecap="round"
+              fill="none"
+              r="16"
+              cx="18"
+              cy="18"
+            />
+          </svg>
+          <div className="absolute inset-2 flex items-center justify-center">
+            {profileData?.photo ? (
+              <img src={profileData.photo} alt="Profile" className="w-full h-full object-cover rounded-full" />
+            ) : (
+              <CircleUser className="w-12 h-12 sm:w-16 sm:h-16 text-gray-500" />
+            )}
           </div>
-        ))}
-      </div>
-      <div className="flex flex-col sm:flex-row gap-2 items-center justify-center sm:justify-end flex-shrink-0">
-        <button
-          className="px-3 py-2 rounded-full border-[var(--accent-color)] text-[var(--accent-color)] bg-white hover:bg-[var(--accent-color)] hover:text-[var(--surface-color)] transition-all duration-300 whitespace-nowrap text-sm"
-          onClick={handleGenerateCard}
-        >
-          View Health Card
-        </button>
-        <div className="relative group">
-          <Pencil onClick={handleEditClick} className="w-8 h-8 p-1 rounded-full bg-white text-black cursor-pointer hover:scale-110 transition-transform duration-200" />
-          <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-[11px] bg-white text-black rounded-md px-2 py-1 opacity-0 scale-90 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-300 shadow-lg z-10">
-            Edit
-          </span>
+          <div className="absolute bottom-0 right-0 bg-yellow-400 text-black px-1.5 py-0.5 text-xs font-bold rounded-full">
+            {profileCompletion}%
+          </div>
+        </div>
+        <div className="flex flex-row flex-wrap gap-1 sm:gap-2 items-center flex-1 min-w-0">
+          {[
+            { label: "Name", value: `${profileData.firstName || "Guest"} ${profileData.lastName || ""}`.trim() },
+            { label: "Date of Birth", value: profileData.dob || "N/A" },
+            { label: "Gender", value: profileData.gender || "N/A" },
+            { label: "Phone No.", value: profileData.phone || "N/A" },
+            { label: "Blood Group", value: profileData.bloodGroup || "N/A" },
+          ].map((item, i) => (
+            <div key={i} className="flex flex-col whitespace-nowrap text-xs sm:text-sm">
+              <span className="text-[#01D48C] truncate">{item.label}</span>
+              <span className="text-gray-200 truncate">{item.value}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 items-center justify-center sm:justify-end flex-shrink-0">
+          <button
+            className="px-2 py-1 sm:px-3 sm:py-2 rounded-full border-[var(--accent-color)] text-[var(--accent-color)] bg-white hover:bg-[var(--accent-color)] hover:text-[var(--surface-color)] transition-all duration-300 whitespace-nowrap text-xs sm:text-sm"
+            onClick={handleGenerateCard}
+          >
+            View Health Card
+          </button>
+          <div className="relative group">
+            <Pencil onClick={handleEditClick} className="w-5 h-5 sm:w-6 sm:h-6 p-1 rounded-full bg-white text-black cursor-pointer hover:scale-110 transition-transform duration-200" />
+            <span className="absolute -top-7 sm:-top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-[11px] bg-white text-black rounded-md px-1.5 py-0.5 opacity-0 scale-90 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-300 shadow-lg z-10">
+              Edit
+            </span>
+          </div>
         </div>
       </div>
-    </div>
-      <div className="mt-6 sm:mt-10 flex gap-4 sm:gap -6 flex-wrap">
-        {sections.map(({ id, name, icon }) => {
-          const Icon = icon === 'user' ? CircleUser : icon === 'heart' ? Heart : Users;
-          return (
-            <button key={id} onClick={() => id !== 'basic' && openModal(id)} className={`px-4 py-2 rounded-lg flex items-center gap-2 text-white text-sm sm:text-base ${activeSection === id ? 'bg-[#0e1630]' : 'bg-[#1f2a4d] hover:bg-[#1b264a]'} transition-all duration-300`}>
-              <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
-              {name}
-              {completionStatus[id] && <ClipboardCheck className="text-green-400 ml-1 animate-pulse" />}
-            </button>
-          );
-        })}
-        <button onClick={() => openModal('additional')} className="px-4 py-2 rounded-lg flex items-center gap-2 text-white text-sm sm:text-base bg-[#1f2a4d] hover:bg-[#1b264a] transition-all duration-300">Additional Details</button>
+
+      {/* Section Tabs (responsive, single row, scrollable on mobile) */}
+      <div className="mt-4 sm:mt-6 overflow-x-auto custom-scrollbar pb-2">
+        <div className="flex gap-2 sm:gap-4 min-w-max">
+          {sections.map(({ id, name, icon }) => {
+            const Icon = icon === 'user' ? CircleUser : icon === 'heart' ? Heart : icon === 'users' ? Users : ClipboardCheck;
+            return (
+              <button
+                key={id}
+                onClick={() => id !== 'basic' && openModal(id)}
+                className={`px-2 py-1 sm:px-3 sm:py-2 rounded-lg flex items-center gap-1 text-white text-xs sm:text-sm whitespace-nowrap ${
+                  activeSection === id ? 'bg-[#0e1630]' : 'bg-[#1f2a4d] hover:bg-[#1b264a]'
+                } transition-all duration-300`}
+              >
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="truncate">{name}</span>
+                {completionStatus[id] && <ClipboardCheck className="text-green-400 ml-1 animate-pulse" />}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
+      {/* Feedback Message */}
       {feedbackMessage.show && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${feedbackMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} transition-all duration-300`}>
+        <div className={`fixed top-4 right-4 z-50 p-3 sm:p-4 rounded-lg shadow-lg ${
+          feedbackMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        } transition-all duration-300`}>
           {feedbackMessage.message}
         </div>
       )}
 
+      {/* Modals */}
       <ReusableModal
         isOpen={showModal}
         onClose={() => { setShowModal(false); setEditFamilyMember(null); }}
@@ -420,44 +419,45 @@ useEffect(() => {
         deleteLabel="Delete"
         size="md"
         extraContent={activeSection === 'family' && Array.isArray(userData.familyMembers) && userData.familyMembers.length > 0 && (
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 space-y-2">
             <h3 className="text-md font-semibold">Saved Family Members</h3>
             {userData.familyMembers.map((m, index) => (
-              <div key={`${m.id}-${index}`} className="p-3 bg-gray-100 rounded-md flex justify-between items-start">
+              <div key={`${m.id}-${index}`} className="p-2 sm:p-3 bg-gray-100 rounded-md flex flex-col sm:flex-row justify-between items-start">
                 <div>
                   <p className="font-semibold">{m.name}</p>
                   <p className="text-sm text-gray-700"><strong>Relation:</strong> {m.relation}</p>
                   {m.number && <p className="text-sm text-gray-700"><strong>Phone:</strong> {m.number}</p>}
                   {m.diseases.length > 0 && <p className="text-sm text-gray-700 mt-1"><strong>Conditions:</strong> {m.diseases.join(', ')}</p>}
                 </div>
-                <div className="flex gap-2">
-                  <button className="text-blue-600 hover:underline text-sm" onClick={() => openModal('family', m)}>Edit</button>
-                  <button className="text-red-600 hover:underline text-sm" onClick={() => handleModalDelete(m)}>Delete</button>
+                <div className="flex gap-1 sm:gap-2 mt-2 sm:mt-0">
+                  <button className="text-blue-600 hover:underline text-xs sm:text-sm" onClick={() => openModal('family', m)}>Edit</button>
+                  <button className="text-red-600 hover:underline text-xs sm:text-sm" onClick={() => handleModalDelete(m)}>Delete</button>
                 </div>
               </div>
             ))}
           </div>
         )}
-
       />
 
+      {/* Health Card Modal */}
       {showHealthCardModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center">
-          <button
-            className="absolute top-1/5 right-1/3 translate-x-1/3 -translate-y-1/3 text-[var(--primary-color)] mt-6 border border-[var(--primary-color)] rounded-full px-2 -mr-4 text-2xl"
-            onClick={() => setShowHealthCardModal(false)}
-          >
-            &times;
-          </button>
-
-
-          <Healthcard hideLogin isOpen onClose={() => setShowHealthCardModal(false)} />
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+          <div className="relative w-full max-w-lg mx-auto">
+            <button
+              className="absolute -top-8 sm:-top-10 right-0 text-[var(--color-surface)] border border-[var(--color-surface)] text-xl sm:text-2xl rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center"
+              onClick={() => setShowHealthCardModal(false)}
+            >
+              &times;
+            </button>
+            <div className="rounded-lg overflow-hidden">
+              <Healthcard hideLogin isOpen onClose={() => setShowHealthCardModal(false)} />
+            </div>
+          </div>
         </div>
-
       )}
 
-
-      <div className="mt-8">
+      {/* Dashboard Overview */}
+      <div className="mt-6 sm:mt-8">
         <DashboardOverview />
       </div>
     </div>

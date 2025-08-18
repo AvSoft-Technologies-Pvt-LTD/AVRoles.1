@@ -1,55 +1,117 @@
-import { useState, useEffect } from "react";
-import { QrCode, Heart, Pill, Syringe, User, HeartPulse } from "lucide-react";
+import { useState } from "react";
+import { QrCode, Heart, Pill, Syringe, Phone } from "lucide-react";
 import { motion } from "framer-motion";
+import logo from "../../assets/logo.png";
 
-const AVCard = ({ initialName, initialCardNumber, initialGender, imageUrl }) => {
-  const [formData, setFormData] = useState({ name: initialName, cardNumber: initialCardNumber, gender: initialGender, imageUrl });
-  useEffect(() => setFormData({ name: initialName, cardNumber: initialCardNumber, gender: initialGender, imageUrl }), [initialName, initialCardNumber, initialGender, imageUrl]);
+const AVCard = () => {
+  const [formData] = useState({
+    name: "Enter Your Name",
+    mobile: "Enter Your Mobile No.",
+    dob: "Date of birth",
+    gender: "Gender",
+    healthId: "250810-MH00F-99271",
+    helpline: "1800-123-4567",
+    imageUrl:
+      "https://img.freepik.com/vecteurs-premium/icone-profil-avatar-par-defaut-image-utilisateur-medias-sociaux-icone-avatar-gris-silhouette-profil-vide-illustration-vectorielle_561158-3383.jpg",
+  });
 
-  const bgIcons = [{ Icon: Heart, pos: "top-4 right-28" }, { Icon: Pill, pos: "bottom-8 left-12" }, { Icon: Syringe, pos: "bottom-22 right-26" }];
+  const bgIcons = [
+    { Icon: Heart, pos: "top-4 right-20" },
+    { Icon: Pill, pos: "bottom-12 left-12" },
+    { Icon: Syringe, pos: "bottom-20 right-20" },
+  ];
 
   return (
-    <motion.div style={{ fontFamily: 'var(--font-family)' }} initial={{ opacity: 0.85, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="relative w-[380px] h-[240px] rounded-2xl overflow-hidden shadow-2xl hover:shadow-[var(--primary-color)]/20 transition-shadow duration-300">
-      <motion.div animate={{ background: ["linear-gradient(135deg, rgb(1, 212, 140) 0%, rgba(14, 22, 48, 0.95) 50%, rgba(14, 22, 48, 0.9) 100%)"] }} className="absolute inset-0" />
+    <motion.div
+      style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
+      initial={{ opacity: 0.85, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="relative w-full max-w-[320px] md:max-w-[350px] h-[220px] md:h-[240px] rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-green-600 to-green-800 text-white mx-auto"
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0E1630] to-[#01D48C] opacity-90"></div>
+
+      {/* Background icons */}
       <div className="absolute inset-0 overflow-hidden">
         {bgIcons.map(({ Icon, pos }, i) => (
-          <motion.div key={i} className={`absolute ${pos}`} animate={{ scale: [1, 1.2, 1], rotate: [0, 360, 0], opacity: [0.12, 0.12, 0.16] }} transition={{ duration: 5 + i, repeat: Infinity, delay: i * 0.8 }}>
-            <Icon size={24} className="text-[var(--accent-color)]" />
+          <motion.div
+            key={i}
+            className={`absolute ${pos}`}
+            animate={{
+              scale: [1, 1.2, 1],
+              rotate: [0, 360, 0],
+              opacity: [0.1, 0.15, 0.1],
+            }}
+            transition={{
+              duration: 8 + i,
+              repeat: Infinity,
+              delay: i * 0.8,
+            }}
+          >
+            <Icon size={24} className="text-green-200" />
           </motion.div>
         ))}
       </div>
-      <div className="relative h-full p-8 flex flex-col justify-between">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <motion.div whileHover={{ scale: 1.1 }} className="relative group">
-              <motion.img src={formData.imageUrl || "https://img.freepik.com/vecteurs-premium/icone-profil-avatar-par-defaut-image-utilisateur-medias-sociaux-icone-avatar-gris-silhouette-profil-vide-illustration-vectorielle_561158-3383.jpg?ga=GA1.1.1895928303.1746111458&semt=ais_hybrid&w=740"} alt="User Avatar" className="w-25 h-12 rounded-full object-cover border-2 border-[var(--accent-color)] shadow-md" initial={{ opacity: 0.9 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} />
-            </motion.div>
-            <div className="space-y-1">
-              <input type="text" name="name" value={formData.name} readOnly className="w-full bg-transparent text-lg font-medium text-[#f5f5f5] tracking-wide" placeholder="Enter Name" />
-              <input type="text" name="cardNumber" value={formData.cardNumber} readOnly className="w-full bg-transparent text-sm text-[var(--accent-color)] tracking-wider font-medium" placeholder="Card Number" />
+
+      {/* Card content */}
+      <div className="relative h-full p-4 flex flex-col">
+        {/* Logo & Title */}
+        <div className="flex justify-start items-center gap-2 mb-1">
+          <img src={logo} alt="AV Logo" className="w-10 h-10" />
+          <div className="text-left">
+            <h1 className="text-lg font-extrabold text-[#01D48C]">DigiHealth</h1>
+            <p className="text-xs font-semibold text-gray-300">
+              Healthcare Solutions
+            </p>
+          </div>
+        </div>
+
+        {/* User Info and QR Code */}
+        <div className="flex justify-between items-center flex-grow mt-1">
+          <div className="flex items-center gap-3">
+            <img
+              src={formData.imageUrl}
+              alt="User"
+              className="w-14 h-14 md:w-16 md:h-16  object-cover border-2 border-white"
+            />
+            <div className="text-sm">
+              <p className="font-semibold">{formData.name}</p>
+              <div className="mt-1 flex items-center gap-1">
+                <strong className="text-xs text-gray-300">Mobile:</strong>
+                <span className="text-xs">{formData.mobile}</span>
+              </div>
+              <div className="mt-1 flex items-center gap-1">
+                <strong className="text-xs text-gray-300">DOB:</strong>
+                <span className="text-xs">{formData.dob}</span>
+              </div>
+              <div className="mt-1 flex items-center gap-1">
+                <strong className="text-xs text-gray-300">Gender:</strong>
+                <span className="text-xs">{formData.gender}</span>
+              </div>
             </div>
           </div>
-          <motion.div whileHover={{ scale: 1.05 }} className="flex flex-col items-center gap-1.5 bg-[var(--accent-color)]/10 p-2.5 rounded-xl hover:bg-[var(--accent-color)]/20 transition-colors duration-300">
-            <QrCode className="w-8 h-8 text-[var(--accent-color)]" />
-          </motion.div>
-        </div>
-        <div className="grid grid-cols-2 gap-4 mt-6">
-          <motion.div whileHover={{ scale: 1.02 }} className="flex items-center gap-3 bg-[var(--accent-color)]/10 p-3 rounded-xl hover:bg-[var(--accent-color)]/20 transition-colors duration-300">
-            <User className="w-5 h-5 text-[var(--accent-color)]" />
-            <input type="text" name="gender" value={formData.gender} readOnly className="w-full bg-transparent text-sm text-[#f5f5f5] font-medium" placeholder="Gender" />
-          </motion.div>
-        </div>
-        <motion.div className="flex justify-end items-end mt-6" whileHover={{ scale: 1.02 }}>
-          <div className="text-right">
-            <div className="text-[var(--accent-color)] font-bold text-xl tracking-wider flex items-center gap-2">
-              AV SWASTHYA
-              <motion.div animate={{ scale: [1, 1.3, 1, 0.9, 1], transition: { duration: 1, repeat: Infinity } }}>
-                <HeartPulse className="w-6 h-6 text-[var(--accent-color)]" />
-              </motion.div>
+
+          {/* QR Code */}
+          <div className="flex flex-col items-center">
+            <div className="w-14 h-14 md:w-16 md:h-16 bg-white p-1 rounded">
+              <QrCode size={55} className="text-green-600" />
             </div>
-            <div className="text-xs text-[#f5f5f5]/80 tracking-wider mt-1">Healthcare Solutions</div>
           </div>
-        </motion.div>
+        </div>
+
+        {/* Footer: Health ID & Helpline */}
+        <div className="flex flex-col items-center justify-center mt-2  text-gray-300">
+          <div className="text-sm font-semibold">
+            Health ID: {formData.healthId}
+          </div>
+          <div className="flex items-center gap-2 text-xs mt-1">
+            <Phone className="w-3 h-3" />
+            <span>
+              Helpline:{" "}
+              <span className="font-semibold">{formData.helpline}</span>
+            </span>
+          </div>
+        </div>
       </div>
     </motion.div>
   );

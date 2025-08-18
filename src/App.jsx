@@ -17,6 +17,8 @@ import Verification from "./form/Verification";
 import Healthcard from "./components/Healthcard";
 import BookApp from "./components/BookApp";
 import Home from "./pages/Home";
+import MedicalRecords from "./pages/layouts/menu/PatientDashboard/MedicalRecord"
+import MedicalRecordDetails from "./pages/layouts/menu/PatientDashboard/MedicalRecordDetails";
 
 // Layouts & Dashboards
 import DashboardLayout from "./pages/layouts/DashboardLayout";
@@ -164,6 +166,8 @@ const App = () => {
         <Route path="/healthcard" element={<Healthcard />} />
         <Route path="/bookconsultation" element={<BookApp />} />
          {/* <Route path="/paymentgateway" element={<PaymentGatewayPage />} /> */}
+        <Route path="/medical-records" element={<MedicalRecords />} />
+        <Route path="/medical-record-details" element={<MedicalRecordDetails />} />
 
 
         {/* ✅ Redirect Based on Role */}

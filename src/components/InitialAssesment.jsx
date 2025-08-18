@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Calendar, User, Phone, MapPin, FileText, Heart, Brain, Baby, 
-  Bone, Eye, Stethoscope, Save, Printer as Print, Download, 
-  Leaf, FlaskConical, Activity, Users, PenTool, Trash2, ChevronDown, ChevronUp
+import {
+  Calendar, User, Phone, MapPin, FileText, Heart, Brain, Baby,
+  Bone, Eye, Stethoscope, Save, Printer as Print, Download,
+  Leaf, FlaskConical, Activity, Users, PenTool, Trash2, ChevronDown, 
+  ChevronUp, Settings, Upload, Image as ImageIcon
 } from 'lucide-react';
-import ImageAnnotationCanvas from './microcomponents/ImageAnnotationCanvas';
-
+import { TemplateModal, prescriptionTemplates, layoutStyles } from './TemplateModal';
+// Medical Specialty Templates Configuration
 const specialtyTemplates = {
   // AYUSH Specializations
   'ayurveda': {
@@ -151,13 +152,18 @@ const specialtyTemplates = {
   }
 };
 
-const MedicalAssessmentForm = () => {
+const InitialAssessment = () => {
   const [selectedCategory, setSelectedCategory] = useState('AYUSH');
   const [selectedSpecialty, setSelectedSpecialty] = useState('ayurveda');
   const [formData, setFormData] = useState({});
   const [handwrittenNotes, setHandwrittenNotes] = useState('');
   const [annotatedImages, setAnnotatedImages] = useState([]);
-  const [showImageAnnotation, setShowImageAnnotation] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('classic');
+  const [selectedColor, setSelectedColor] = useState('#2563eb');
+  const fileInputRef = useRef(null);
+  
   const [patientInfo, setPatientInfo] = useState({
     patientId: '',
     name: '',
@@ -168,6 +174,7 @@ const MedicalAssessmentForm = () => {
     referredBy: '',
     consultingDoctor: 'Dr. Sheetal Shelke, BHMS'
   });
+  
   const [vitals, setVitals] = useState({
     temperature: '',
     pulse: '',
@@ -179,6 +186,7 @@ const MedicalAssessmentForm = () => {
     bmi: ''
   });
 
+  // Get the selected specialty template configuration
   const template = specialtyTemplates[selectedSpecialty];
   const IconComponent = template.icon;
 
@@ -188,6 +196,7 @@ const MedicalAssessmentForm = () => {
       key => specialtyTemplates[key].category === category
     );
     setSelectedSpecialty(firstSpecialty);
+    setFormData({}); // Reset form data when category changes
   };
 
   const handleInputChange = (sectionId, value) => {
@@ -197,25 +206,70 @@ const MedicalAssessmentForm = () => {
     }));
   };
 
-  const handleImageAnnotated = (imageData) => {
-    setAnnotatedImages(prev => [...prev, {
-      id: Date.now(),
-      data: imageData,
-      timestamp: new Date().toISOString(),
-      specialty: selectedSpecialty
-    }]);
+  const handlePatientInfoChange = (field, value) => {
+    setPatientInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleVitalsChange = (field, value) => {
+    setVitals(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleTemplateSelect = (templateId) => {
+    setSelectedTemplate(templateId);
+  };
+
+  // Handle image upload, convert to base64, send to API, and store returned link
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Convert file to base64
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result.split(',')[1];
+      // Send base64 to API
+      try {
+        const response = await fetch('https://6899921cfed141b96b9fea9a.mockapi.io/template', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64String })
+        });
+        if (response.ok) {
+          const result = await response.json();
+          // Assume API returns a link to the uploaded image
+          setAnnotatedImages(prev => [...prev, {
+            id: Date.now(),
+            link: result.image || result.link || '',
+            timestamp: new Date().toISOString(),
+            specialty: selectedTemplate
+          }]);
+          alert('Image uploaded successfully!');
+        } else {
+          alert('Failed to upload image');
+        }
+      } catch (err) {
+        alert('Error uploading image');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const renderFormSection = (section) => {
     switch (section.type) {
       case 'textarea':
         return (
-          <div key={section.id} className="mb-4">
+          <div key={section.id} className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               {section.label} {section.required && <span className="text-red-500">*</span>}
             </label>
             <textarea
-              className="input-field min-h-[80px] resize-none focus:border-[var(--primary-color)] transition-all duration-200"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-none transition-all duration-200"
               placeholder={`Enter ${section.label.toLowerCase()}`}
               value={formData[section.id] || ''}
               onChange={(e) => handleInputChange(section.id, e.target.value)}
@@ -223,19 +277,19 @@ const MedicalAssessmentForm = () => {
             />
           </div>
         );
-      
+
       case 'checklist':
         return (
-          <div key={section.id} className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <div key={section.id} className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
               {section.label}
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {section.options.map((option) => (
-                <label key={option} className="flex items-center p-2 bg-gray-50 rounded hover:bg-gray-100 transition-all cursor-pointer border hover:border-[var(--accent-color)]">
+                <label key={option} className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer border hover:border-blue-300">
                   <input
                     type="checkbox"
-                    className="mr-2 w-4 h-4 text-[var(--accent-color)] bg-gray-100 border-gray-300 rounded focus:ring-[var(--accent-color)]"
+                    className="mr-3 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                     onChange={(e) => {
                       const currentValues = formData[section.id] || [];
                       if (e.target.checked) {
@@ -254,17 +308,17 @@ const MedicalAssessmentForm = () => {
 
       case 'radio':
         return (
-          <div key={section.id} className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <div key={section.id} className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
               {section.label}
             </label>
-            <div className="space-y-1">
+            <div className="space-y-2">
               {section.options.map((option) => (
-                <label key={option} className="flex items-center p-2 bg-gray-50 rounded hover:bg-gray-100 transition-all cursor-pointer border hover:border-[var(--accent-color)]">
+                <label key={option} className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all cursor-pointer border hover:border-blue-300">
                   <input
                     type="radio"
                     name={section.id}
-                    className="mr-2 w-4 h-4 text-[var(--accent-color)] bg-gray-100 border-gray-300 focus:ring-[var(--accent-color)]"
+                    className="mr-3 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
                     onChange={() => handleInputChange(section.id, option)}
                   />
                   <span className="text-sm text-gray-700">{option}</span>
@@ -276,19 +330,19 @@ const MedicalAssessmentForm = () => {
 
       case 'pain-scale':
         return (
-          <div key={section.id} className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <div key={section.id} className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
               Pain Scale (0-10)
             </label>
-            <div className="flex items-center space-x-2 bg-gray-50 rounded p-3 border">
-              <span className="text-xs text-gray-600">No Pain</span>
+            <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-4 border">
+              <span className="text-xs text-gray-600 mr-2">No Pain</span>
               {[...Array(11)].map((_, i) => (
                 <button
                   key={i}
                   type="button"
-                  className={`w-6 h-6 rounded-full text-xs font-bold transition-all ${
+                  className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${
                     formData[section.id] === i 
-                      ? 'bg-[var(--accent-color)] text-white' 
+                      ? 'bg-red-500 text-white shadow-lg' 
                       : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                   }`}
                   onClick={() => handleInputChange(section.id, i)}
@@ -296,23 +350,23 @@ const MedicalAssessmentForm = () => {
                   {i}
                 </button>
               ))}
-              <span className="text-xs text-gray-600">Severe</span>
+              <span className="text-xs text-gray-600 ml-2">Severe</span>
             </div>
           </div>
         );
 
       case 'vitals-pediatric':
         return (
-          <div key={section.id} className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <div key={section.id} className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
               Growth Parameters
             </label>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs text-gray-600 mb-1">Height (cm)</label>
                 <input
                   type="number"
-                  className="input-field focus:border-[var(--primary-color)]"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Height"
                   onChange={(e) => handleInputChange('height', e.target.value)}
                 />
@@ -321,7 +375,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Weight (kg)</label>
                 <input
                   type="number"
-                  className="input-field focus:border-[var(--primary-color)]"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Weight"
                   onChange={(e) => handleInputChange('weight', e.target.value)}
                 />
@@ -330,7 +384,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Head Circumference (cm)</label>
                 <input
                   type="number"
-                  className="input-field focus:border-[var(--primary-color)]"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Head Circ."
                   onChange={(e) => handleInputChange('headCircumference', e.target.value)}
                 />
@@ -339,7 +393,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Percentile</label>
                 <input
                   type="text"
-                  className="input-field focus:border-[var(--primary-color)]"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Percentile"
                   onChange={(e) => handleInputChange('percentile', e.target.value)}
                 />
@@ -350,16 +404,16 @@ const MedicalAssessmentForm = () => {
 
       case 'vision-test':
         return (
-          <div key={section.id} className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <div key={section.id} className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
               Visual Acuity
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-600 mb-1">Right Eye</label>
                 <input
                   type="text"
-                  className="input-field focus:border-[var(--primary-color)]"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., 20/20"
                   onChange={(e) => handleInputChange('rightEye', e.target.value)}
                 />
@@ -368,7 +422,7 @@ const MedicalAssessmentForm = () => {
                 <label className="block text-xs text-gray-600 mb-1">Left Eye</label>
                 <input
                   type="text"
-                  className="input-field focus:border-[var(--primary-color)]"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., 20/20"
                   onChange={(e) => handleInputChange('leftEye', e.target.value)}
                 />
@@ -388,808 +442,546 @@ const MedicalAssessmentForm = () => {
     alert('Assessment form submitted successfully!');
   };
 
-  const handlePrint = () => {
-    generatePrintTemplate();
-  };
-
   const generatePrintTemplate = () => {
+    const currentTemplate = prescriptionTemplates[selectedTemplate];
+    const currentLayout = layoutStyles[currentTemplate.layout] || layoutStyles.traditional;
+    
     const printContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${template.title} - ${patientInfo.name || 'Patient'}</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: white;
-            padding: 20px;
-            font-size: 14px;
-        }
-        
-        .header {
-            text-align: center;
-            border-bottom: 3px solid #01D48C;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .hospital-name {
-            font-size: 28px;
-            font-weight: bold;
-            color: #01D48C;
-            margin-bottom: 5px;
-        }
-        
-        .form-title {
-            font-size: 20px;
-            color: #0E1630;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-        
-        .form-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .section {
-            margin-bottom: 25px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .section-header {
-            background: #f3f4f6;
-            padding: 12px 15px;
-            font-weight: bold;
-            color: #374151;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .section-content {
-            padding: 15px;
-        }
-        
-        .field-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .field {
-            margin-bottom: 10px;
-        }
-        
-        .field-label {
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 5px;
-            font-size: 13px;
-        }
-        
-        .field-value {
-            border: 1px solid #d1d5db;
-            padding: 8px 10px;
-            border-radius: 4px;
-            background: #f9fafb;
-            min-height: 35px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .field-value.large {
-            min-height: 80px;
-            align-items: flex-start;
-            padding-top: 10px;
-        }
-        
-        .checkbox-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 8px;
-        }
-        
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            padding: 5px;
-            border: 1px solid #e5e7eb;
-            border-radius: 4px;
-            background: #f9fafb;
-        }
-        
-        .checkbox {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #d1d5db;
-            margin-right: 8px;
-            border-radius: 3px;
-            position: relative;
-        }
-        
-        .checkbox.checked::after {
-            content: '✓';
-            position: absolute;
-            top: -2px;
-            left: 2px;
-            color: #059669;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        .radio-item {
-            display: flex;
-            align-items: center;
-            padding: 5px;
-            border: 1px solid #e5e7eb;
-            border-radius: 4px;
-            background: #f9fafb;
-        }
-        
-        .radio {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #d1d5db;
-            border-radius: 50%;
-            margin-right: 8px;
-            position: relative;
-        }
-        
-        .radio.selected::after {
-            content: '';
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 8px;
-            height: 8px;
-            background: #059669;
-            border-radius: 50%;
-        }
-        
-        .pain-scale {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px;
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 4px;
-        }
-        
-        .pain-number {
-            width: 30px;
-            height: 30px;
-            border: 2px solid #d1d5db;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-        }
-        
-        .pain-number.selected {
-            background: #dc2626;
-            color: white;
-            border-color: #dc2626;
-        }
-        
-        .notes-section {
-            background: #f9fafb;
-            border: 2px dashed #d1d5db;
-            border-radius: 8px;
-            padding: 15px;
-            min-height: 120px;
-            font-family: 'Courier New', monospace;
-            white-space: pre-wrap;
-            line-height: 1.8;
-        }
-        
-        .footer {
-            margin-top: 40px;
-            border-top: 2px solid #01D48C;
-            padding-top: 20px;
-            text-align: center;
-        }
-        
-        .footer-title {
-            font-weight: bold;
-            color: #01D48C;
-            margin-bottom: 10px;
-        }
-        
-        .footer-info {
-            font-size: 11px;
-            color: #666;
-            line-height: 1.4;
-        }
-        
-        .signature-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-        }
-        
-        .signature-box {
-            text-align: center;
-        }
-        
-        .signature-line {
-            border-bottom: 1px solid #374151;
-            height: 40px;
-            margin-bottom: 10px;
-        }
-        
-        @media print {
-            body { padding: 0; }
-            .section { break-inside: avoid; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${template.title} - ${patientInfo.name || 'Patient'}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Georgia', 'Times New Roman', serif; 
+      line-height: 1.6; 
+      color: #333; 
+      background: white; 
+      padding: 20px; 
+      font-size: 14px; 
+    }
+    .header {
+      background-color: ${selectedColor};
+      color: white;
+      padding: 30px;
+      margin-bottom: 30px;
+      text-align: ${currentLayout.header.textAlign};
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      ${currentLayout.header.border ? `border: ${currentLayout.header.border.replace('solid', `solid ${selectedColor}`)}` : ''};
+      ${currentLayout.header.borderLeft ? `border-left: ${currentLayout.header.borderLeft.replace('solid', `solid ${selectedColor}`)}` : ''};
+      ${currentLayout.header.borderBottom ? `border-bottom: ${currentLayout.header.borderBottom.replace('solid', `solid ${selectedColor}`)}` : ''};
+    }
+    .hospital-name { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+    .doctor-name { font-size: 20px; margin-bottom: 5px; }
+    .hospital-address { font-size: 14px; opacity: 0.9; margin-bottom: 15px; }
+    .form-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+    .form-meta { 
+      display: flex; 
+      justify-content: ${currentLayout.header.textAlign === 'center' ? 'center' : currentLayout.header.textAlign === 'left' ? 'flex-start' : 'flex-end'}; 
+      gap: 30px; 
+      font-size: 12px; 
+      opacity: 0.9; 
+    }
+    .category-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .patient-info {
+      background: #f8fafc;
+      border: 2px solid ${selectedColor};
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    .patient-info h4 { color: ${selectedColor}; font-size: 18px; margin-bottom: 15px; text-align: center; }
+    .patient-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    .patient-field { display: flex; flex-direction: column; }
+    .patient-field label { font-weight: bold; color: #374151; margin-bottom: 5px; font-size: 12px; }
+    .patient-field .value { border-bottom: 2px solid ${selectedColor}; padding: 8px 0; min-height: 30px; }
+    .section {
+      margin-bottom: 25px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .section-header {
+      background: ${selectedColor};
+      color: white;
+      padding: 15px 20px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .section-content { padding: 20px; }
+    .field-value {
+      border: 2px solid #e5e7eb;
+      padding: 12px 15px;
+      border-radius: 8px;
+      background: #fafafa;
+      min-height: 80px;
+      margin-bottom: 15px;
+      white-space: pre-wrap;
+    }
+    .vitals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .vital-field { border: 2px solid #e5e7eb; padding: 10px; border-radius: 8px; background: #fafafa; text-align: center; }
+    .vital-label { font-weight: bold; color: ${selectedColor}; font-size: 12px; margin-bottom: 5px; }
+    .vital-value { font-size: 16px; font-weight: bold; }
+    .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
+    .checkbox-item { display: flex; align-items: center; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; background: #f9fafb; }
+    .checkbox { width: 18px; height: 18px; border: 2px solid #d1d5db; margin-right: 10px; border-radius: 4px; position: relative; }
+    .checkbox.checked::after { content: '✓'; position: absolute; top: -3px; left: 2px; color: ${selectedColor}; font-weight: bold; font-size: 16px; }
+    .radio-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+    .radio-item { display: flex; align-items: center; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; background: #f9fafb; }
+    .radio { width: 18px; height: 18px; border: 2px solid #d1d5db; border-radius: 50%; margin-right: 10px; position: relative; }
+    .radio.selected::after { content: ''; position: absolute; top: 3px; left: 3px; width: 8px; height: 8px; border-radius: 50%; background-color: ${selectedColor}; }
+    .pain-scale { display: flex; align-items: center; gap: 8px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 2px solid #e5e7eb; margin-bottom: 15px; }
+    .pain-number { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2px solid #d1d5db; background: white; }
+    .pain-number.selected { background-color: ${selectedColor}; color: white; border-color: ${selectedColor}; }
+    .signature-section { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 50px; padding-top: 30px; border-top: 2px solid ${selectedColor}; }
+    .signature-box { text-align: ${currentLayout.footer?.textAlign || 'center'}; }
+    .signature-line { border-bottom: 2px solid ${selectedColor}; height: 50px; margin-bottom: 15px; }
+    .footer { 
+      margin-top: 30px; 
+      text-align: ${currentLayout.footer?.textAlign || 'center'}; 
+      font-size: 12px; 
+      color: #666; 
+      border-top: 1px solid #e5e7eb; 
+      padding-top: 20px; 
+    }
+    @media print {
+      body { padding: 0; }
+      .section { break-inside: avoid; }
+      * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+    }
+  </style>
 </head>
 <body>
-    <div class="header">
-        <div class="hospital-name">AVSwasthya Hospital System</div>
-        <div class="form-title">${template.title}</div>
-        <div class="form-meta">
-            <span>Date: ${new Date().toLocaleDateString()}</span>
-            <span>Form ID: MED-${Date.now()}</span>
-            <span>Time: ${new Date().toLocaleTimeString()}</span>
-        </div>
+  <div class="header">
+    <div class="hospital-name">AVSwasthya Hospital System</div>
+    <div class="doctor-name">${patientInfo.consultingDoctor || 'Dr. Sample Name'}</div>
+    <div class="hospital-address">123 Medical Street, Healthcare City, HC 12345</div>
+    <div class="category-badge">${selectedCategory} Department</div>
+    <div class="form-title">${template.title}</div>
+    <div class="form-meta">
+      <span>Date: ${new Date().toLocaleDateString()}</span>
+      <span>Form ID: MED-${Date.now().toString().slice(-6)}</span>
+      <span>Time: ${new Date().toLocaleTimeString()}</span>
     </div>
+  </div>
+  
+  <div class="patient-info">
+    <h4>Patient Information</h4>
+    <div class="patient-grid">
+      <div class="patient-field"><label>Patient Name</label><div class="value">${patientInfo.name || ''}</div></div>
+      <div class="patient-field"><label>Age</label><div class="value">${patientInfo.age || ''}</div></div>
+      <div class="patient-field"><label>Gender</label><div class="value">${patientInfo.gender || ''}</div></div>
+      <div class="patient-field"><label>Contact</label><div class="value">${patientInfo.contact || ''}</div></div>
+      <div class="patient-field"><label>Address</label><div class="value">${patientInfo.address || ''}</div></div>
+      <div class="patient-field"><label>Referred By</label><div class="value">${patientInfo.referredBy || ''}</div></div>
+    </div>
+  </div>
+  
+  
 
+  ${template.sections.map(section => {
+    const sectionData = formData[section.id];
+    let content = '';
+    
+    if (section.type === 'textarea') {
+      content = `<div class="field-value">${sectionData || ''}</div>`;
+    } else if (section.type === 'checklist' && sectionData) {
+      content = `<div class="checkbox-grid">${sectionData.map(item => 
+        `<div class="checkbox-item"><div class="checkbox checked"></div>${item}</div>`
+      ).join('')}</div>`;
+    } else if (section.type === 'radio' && sectionData) {
+      content = `<div class="radio-group">${section.options.map(option => 
+        `<div class="radio-item"><div class="radio ${sectionData === option ? 'selected' : ''}"></div>${option}</div>`
+      ).join('')}</div>`;
+    } else if (section.type === 'pain-scale' && sectionData !== undefined) {
+      content = `<div class="pain-scale">
+        <span style="font-size: 12px; color: #666;">No Pain</span>
+        ${[...Array(11)].map((_, i) => `<div class="pain-number ${sectionData === i ? 'selected' : ''}">${i}</div>`).join('')}
+        <span style="font-size: 12px; color: #666;">Severe</span>
+      </div>`;
+    } else if (section.type === 'vitals-pediatric') {
+      content = `<div class="vitals-grid">
+        <div class="vital-field"><div class="vital-label">Height (cm)</div><div class="vital-value">${formData.height || '___'}</div></div>
+        <div class="vital-field"><div class="vital-label">Weight (kg)</div><div class="vital-value">${formData.weight || '___'}</div></div>
+        <div class="vital-field"><div class="vital-label">Head Circumference (cm)</div><div class="vital-value">${formData.headCircumference || '___'}</div></div>
+        <div class="vital-field"><div class="vital-label">Percentile</div><div class="vital-value">${formData.percentile || '___'}</div></div>
+      </div>`;
+    } else if (section.type === 'vision-test') {
+      content = `<div class="vitals-grid">
+        <div class="vital-field"><div class="vital-label">Right Eye</div><div class="vital-value">${formData.rightEye || '___'}</div></div>
+        <div class="vital-field"><div class="vital-label">Left Eye</div><div class="vital-value">${formData.leftEye || '___'}</div></div>
+      </div>`;
+    } else {
+      content = `<div class="field-value">${sectionData || ''}</div>`;
+    }
+    
+    return `
+      <div class="section">
+        <div class="section-header">${section.label}</div>
+        <div class="section-content">${content}</div>
+      </div>`;
+  }).join('')}
+
+  ${handwrittenNotes ? `
     <div class="section">
-        <div class="section-header">Patient Information</div>
-        <div class="section-content">
-            <div class="field-grid">
-                <div class="field">
-                    <div class="field-label">Patient ID</div>
-                    <div class="field-value">${patientInfo.patientId || ''}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Full Name</div>
-                    <div class="field-value">${patientInfo.name || ''}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Age</div>
-                    <div class="field-value">${patientInfo.age || ''}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Gender</div>
-                    <div class="field-value">${patientInfo.gender || ''}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Contact Number</div>
-                    <div class="field-value">${patientInfo.contact || ''}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Consulting Doctor</div>
-                    <div class="field-value">${patientInfo.consultingDoctor || ''}</div>
-                </div>
-            </div>
-            <div class="field">
-                <div class="field-label">Address</div>
-                <div class="field-value large">${patientInfo.address || ''}</div>
-            </div>
-        </div>
+      <div class="section-header">Additional Notes</div>
+      <div class="section-content">
+        <div class="field-value" style="font-family: 'Courier New', monospace; white-space: pre-wrap;">${handwrittenNotes}</div>
+      </div>
     </div>
+  ` : ''}
 
-    <div class="section">
-        <div class="section-header">Vital Signs</div>
-        <div class="section-content">
-            <div class="field-grid">
-                <div class="field">
-                    <div class="field-label">Temperature (°F)</div>
-                    <div class="field-value">${vitals.temperature || ''}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Pulse (BPM)</div>
-                    <div class="field-value">${vitals.pulse || ''}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Blood Pressure</div>
-                    <div class="field-value">${vitals.bp || ''}</div>
-                </div>
-                <div class="field">
-                    <div class="field-label">SpO2 (%)</div>
-                    <div class="field-value">${vitals.spo2 || ''}</div>
-                </div>
-            </div>
-        </div>
+  <div class="signature-section">
+    <div class="signature-box">
+      <div class="signature-line"></div>
+      <div>Patient Signature</div>
     </div>
-
-    ${template.sections.map(section => {
-      const sectionData = formData[section.id];
-      
-      return `
-        <div class="section">
-            <div class="section-header">${section.label}</div>
-            <div class="section-content">
-                ${renderPrintSection(section, sectionData)}
-            </div>
-        </div>
-      `;
-    }).join('')}
-
-    <div class="section">
-        <div class="section-header">Clinical Notes & Observations</div>
-        <div class="section-content">
-            <div class="notes-section">${handwrittenNotes || 'No additional notes provided.'}</div>
-        </div>
+    <div class="signature-box">
+      <div class="signature-line"></div>
+      <div>Doctor Signature</div>
     </div>
-
-    <div class="signature-section">
-        <div class="signature-box">
-            
-        </div>
-        <div class="signature-box">
-            <div class="signature-line"></div>
-            <div>Doctor Signature</div>
-        </div>
-    </div>
-
-    <div class="footer">
-        <div class="footer-title">
-            ${selectedCategory === 'AYUSH' ? 'AYUSH Department' : 'Allopathy Department'} - ${template.title.replace(' Assessment', '')} Excellence
-        </div>
-        <div class="footer-info">
-            © 2025 AVSwasthya Hospital System. All rights reserved. | Confidential Medical Document<br>
-            This form contains confidential patient information and should be handled according to HIPAA guidelines.<br>
-            Emergency: +91-XXXX-XXXX | Email: info@avswasthya.com | Website: www.avswasthya.com
-        </div>
-    </div>
+  </div>
+  
+  <div class="footer">
+    <p><strong>${selectedCategory} Department - ${template.title}</strong></p>
+    <p>Generated on ${new Date().toLocaleString()} | AVSwasthya Hospital System</p>
+    <p>This is a confidential medical document. For queries, contact: info@avswasthya.com</p>
+  </div>
 </body>
 </html>`;
 
-    // Create a new window with the print content
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printContent);
     printWindow.document.close();
-    
-    // Wait for content to load then print
-    printWindow.onload = () => {
-      printWindow.print();
-    };
+    printWindow.print();
   };
 
-  const renderPrintSection = (section, sectionData) => {
-    switch (section.type) {
-      case 'textarea':
-        return `<div class="field-value large">${sectionData || ''}</div>`;
-      
-      case 'checklist':
-        return `
-          <div class="checkbox-grid">
-            ${section.options.map(option => `
-              <div class="checkbox-item">
-                <div class="checkbox ${(sectionData && sectionData.includes(option)) ? 'checked' : ''}"></div>
-                <span>${option}</span>
-              </div>
-            `).join('')}
-          </div>
-        `;
-
-      case 'radio':
-        return `
-          <div class="radio-group">
-            ${section.options.map(option => `
-              <div class="radio-item">
-                <div class="radio ${sectionData === option ? 'selected' : ''}"></div>
-                <span>${option}</span>
-              </div>
-            `).join('')}
-          </div>
-        `;
-
-      case 'pain-scale':
-        return `
-          <div class="pain-scale">
-            <span style="font-size: 12px; color: #666;">No Pain</span>
-            ${[...Array(11)].map((_, i) => `
-              <div class="pain-number ${sectionData === i ? 'selected' : ''}">${i}</div>
-            `).join('')}
-            <span style="font-size: 12px; color: #666;">Severe</span>
-          </div>
-        `;
-
-      case 'vitals-pediatric':
-        return `
-          <div class="field-grid">
-            <div class="field">
-              <div class="field-label">Height (cm)</div>
-              <div class="field-value">${formData.height || ''}</div>
-            </div>
-            <div class="field">
-              <div class="field-label">Weight (kg)</div>
-              <div class="field-value">${formData.weight || ''}</div>
-            </div>
-            <div class="field">
-              <div class="field-label">Head Circumference (cm)</div>
-              <div class="field-value">${formData.headCircumference || ''}</div>
-            </div>
-            <div class="field">
-              <div class="field-label">Percentile</div>
-              <div class="field-value">${formData.percentile || ''}</div>
-            </div>
-          </div>
-        `;
-
-      case 'vision-test':
-        return `
-          <div class="field-grid">
-            <div class="field">
-              <div class="field-label">Right Eye</div>
-              <div class="field-value">${formData.rightEye || ''}</div>
-            </div>
-            <div class="field">
-              <div class="field-label">Left Eye</div>
-              <div class="field-value">${formData.leftEye || ''}</div>
-            </div>
-          </div>
-        `;
-
-      default:
-        return `<div class="field-value">${sectionData || ''}</div>`;
-    }
+  const handlePrint = () => {
+    generatePrintTemplate();
   };
 
+  const handleDownload = () => {
+    const printContent = generatePrintTemplate();
+    const blob = new Blob([printContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${template.title.replace(/\s+/g, '_')}_${patientInfo.name || 'Patient'}_${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Filter specialties based on selected category
   const filteredSpecialties = Object.entries(specialtyTemplates).filter(
     ([key, spec]) => spec.category === selectedCategory
   );
 
-  // For dropdown options
+  // Category options
   const categoryOptions = [
-    { value: 'Allopathy', label: 'Allopathy (Modern Medicine)' },
     { value: 'AYUSH', label: 'AYUSH (Traditional Medicine)' },
+    { value: 'Allopathy', label: 'Allopathy (Modern Medicine)' }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-[var(--primary-color)] text-white shadow-lg print:hidden">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-[var(--accent-color)] rounded-full">
-                <IconComponent size={24} className="text-white" />
+    <div className="min-h-screen ">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-l-4 border-[var(--primary-color)]">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center mb-4 lg:mb-0">
+              <div className="bg-[var(--accent-color)] p-3 rounded-lg mr-4">
+                <IconComponent className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold shimmer-text">{template.title}</h1>
-                <p className="text-sm opacity-90">AVSwasthya Hospital System</p>
+                <h1 className="h3-heading">{template.title}</h1>
+                <p className="paragraph">{selectedCategory} Department - Comprehensive medical evaluation form</p>
               </div>
             </div>
-            <div className="text-right text-sm">
-              <p>Date: {new Date().toLocaleDateString()}</p>
-              <p>Time: {new Date().toLocaleTimeString()}</p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setShowTemplateModal(true)}
+                className="btn btn-secondary"
+                type="button"
+              >
+                <Settings className="w-4 h-4" />
+                Templates
+              </button>
+              <button
+                onClick={() => setShowImageUpload(!showImageUpload)}
+                className="btn btn-primary"
+                type="button"
+              >
+               Upload Template 
+              </button>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Print Header - Only visible when printing */}
-      <div className="hidden print:block">
-        <div className="text-center border-b-2 border-[var(--primary-color)] pb-4 mb-6">
-          <h1 className="h2-heading">AVSwasthya Hospital System</h1>
-          <p className="text-lg font-semibold text-[var(--accent-color)] mt-1">{template.title}</p>
-          <div className="flex justify-between mt-3 text-sm">
-            <span>Date: {new Date().toLocaleDateString()}</span>
-            <span>Form ID: MED-{Date.now()}</span>
-            <span>Time: {new Date().toLocaleTimeString()}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Category & Specialty Selector - Modern Card UI */}
-          <div className="print:hidden rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
-            <h2 className="h3-heading mb-4">Select Medical System & Specialty</h2>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Category & Specialty Selector */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
+            <h4 className="h4-heading mb-4 flex items-center">
+              <Settings className="w-5 h-5 text-blue mr-2" />
+              Select Medical System & Specialty
+            </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Medical System Dropdown */}
               <div>
-                <label className="block text-base font-semibold mb-2 text-gray-700">Medical System</label>
-                <div className="relative group">
-                  <select
-                    className="w-full py-3 px-4 pr-10 rounded-lg border-2 border-[var(--accent-color)] focus:border-[var(--accent-color)] focus:ring-0 ring-0 outline-none text-[var(--accent-color)] shadow transition-all duration-200 appearance-none font-semibold hover:border-[var(--accent-color)] cursor-pointer"
-                    value={selectedCategory}
-                    onChange={e => handleCategoryChange(e.target.value)}
-                  >
-                    {categoryOptions.map(opt => (
-                      <option key={opt.value} value={opt.value} className="font-semibold text-gray-900 bg-white text-[var(--accent-color)]">
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--accent-color)]  group-focus-within:text-white">
-                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </span>
-                </div>
-              </div>
-              {/* Specialty Dropdown */}
-              <div>
-                <label className="block text-base font-semibold mb-2 text-gray-700">Specialty</label>
-                <div className="relative group">
-                  <select
-                    className="w-full py-3 px-4 pr-10 rounded-lg border-2 border-[var(--accent-color)] focus:border-[var(--accent-color)] focus:ring-0 ring-0 outline-none text-[var(--accent-color)] shadow transition-all duration-200 appearance-none font-semibold hover:border-[var(--accent-color)] cursor-pointer"
-                    value={selectedSpecialty}
-                    onChange={e => setSelectedSpecialty(e.target.value)}
-                  >
-                    {filteredSpecialties.map(([key, spec]) => (
-                      <option key={key} value={key} className="font-semibold text-gray-900 bg-white text-[var(--accent-color)]">
-                        {spec.title.replace(' Assessment', '')}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--accent-color)]  group-focus-within:text-white">
-                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Medical Image Upload & Annotation Section (Collapsible) */}
-          <div className="print:hidden rounded-xl shadow-lg bg-white mb-6 border border-gray-100">
-            <button
-              type="button"
-              className="w-full flex items-center justify-between px-6 py-4 focus:outline-none group"
-              onClick={() => setShowImageAnnotation((prev) => !prev)}
-            >
-              <span className="text-lg font-semibold text-gray-800 flex items-center">
-                <Download className="mr-2 text-[var(--accent-color)]" size={20} />
-                Upload Your Template
-              </span>
-              {showImageAnnotation ? (
-                <ChevronUp size={22} className="text-gray-400 group-hover:text-[var(--accent-color)] transition-all" />
-              ) : (
-                <ChevronDown size={22} className="text-gray-400 group-hover:text-[var(--accent-color)] transition-all" />
-              )}
-            </button>
-            {showImageAnnotation && (
-              <div className="px-6 pb-6">
-                <ImageAnnotationCanvas onImageChange={handleImageAnnotated} />
-              </div>
-            )}
-          </div>
-
-          {/* Patient Information */}
-          <div className="rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
-            <h2 className="h3-heading mb-4 flex items-center">
-              <User className="mr-2 text-[var(--accent-color)]" size={20} />
-              Patient Information
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Patient ID</label>
-                <input
-                  type="text"
-                  className="input-field focus:border-[var(--primary-color)]"
-                  placeholder="Enter Patient ID"
-                  value={patientInfo.patientId}
-                  onChange={(e) => setPatientInfo({...patientInfo, patientId: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  className="input-field focus:border-[var(--primary-color)]"
-                  placeholder="Enter Full Name"
-                  value={patientInfo.name}
-                  onChange={(e) => setPatientInfo({...patientInfo, name: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Age</label>
-                <input
-                  type="number"
-                  className="input-field focus:border-[var(--primary-color)]"
-                  placeholder="Age"
-                  value={patientInfo.age}
-                  onChange={(e) => setPatientInfo({...patientInfo, age: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Gender</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Medical System</label>
                 <select
-                  className="input-field focus:border-[var(--primary-color)]"
-                  value={patientInfo.gender}
-                  onChange={(e) => setPatientInfo({...patientInfo, gender: e.target.value})}
+                  className="input-field font-semibold"
+                  value={selectedCategory}
+                  onChange={e => handleCategoryChange(e.target.value)}
                 >
-                  <option value="">Select Gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
+                  {categoryOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Specialty</label>
+                <select
+                  className="input-field font-semibold"
+                  value={selectedSpecialty}
+                  onChange={e => setSelectedSpecialty(e.target.value)}
+                >
+                  {filteredSpecialties.map(([key, spec]) => (
+                    <option key={key} value={key}>
+                      {spec.title.replace(' Assessment', '')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center text-sm text-gray-600">
+                <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: selectedColor }}></div>
+                <span className="font-medium">Selected:</span>
+                <span className="ml-2">{selectedCategory} → {template.title}</span>
+                <span className="ml-4 text-xs bg-gray-200 px-2 py-1 rounded">{template.sections.length} sections</span>
+              </div>
+            </div>
+          </div>
+          {/* Image Upload Section */}
+          {showImageUpload && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center mb-4">
+                <ImageIcon className="w-6 h-6 text-green-500 mr-3" />
+                <h4 className="h4-heading">Medical Images</h4>
+              </div>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn btn-secondary mx-auto"
+                >
+                  Upload Medical Image
+                </button>
+                <p className="text-sm text-gray-500 mt-2">Upload X-rays, scans, or other medical images</p>
+              </div>
+              {annotatedImages.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="h4-heading mb-3">Uploaded Images</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {annotatedImages.map((image) => (
+                      <div key={image.id} className="border rounded-lg p-3 bg-gray-50">
+                        <div className="text-sm text-gray-600">
+                          <p>Uploaded: {new Date(image.timestamp).toLocaleString()}</p>
+                          <p>Specialty: {specialtyTemplates[image.specialty]?.title || image.specialty}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {/* Patient Information */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center mb-6">
+              <User className="w-6 h-6 text-[var--(primary-color)]mr-3" />
+              <h4 className="h4-heading">Patient Information</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Patient ID</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={patientInfo.patientId}
+                  onChange={(e) => handlePatientInfoChange('patientId', e.target.value)}
+                  placeholder="Enter patient ID"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-field"
+                  value={patientInfo.name}
+                  onChange={(e) => handlePatientInfoChange('name', e.target.value)}
+                  placeholder="Enter patient name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  value={patientInfo.age}
+                  onChange={(e) => handlePatientInfoChange('age', e.target.value)}
+                  placeholder="Age"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <select
+                  className="input-field"
+                  value={patientInfo.gender}
+                  onChange={(e) => handlePatientInfoChange('gender', e.target.value)}
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contact</label>
                 <input
                   type="tel"
-                  className="input-field focus:border-[var(--primary-color)]"
-                  placeholder="Contact Number"
+                  className="input-field"
                   value={patientInfo.contact}
-                  onChange={(e) => setPatientInfo({...patientInfo, contact: e.target.value})}
+                  onChange={(e) => handlePatientInfoChange('contact', e.target.value)}
+                  placeholder="Phone number"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Consulting Doctor</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Consulting Doctor</label>
                 <input
                   type="text"
-                  className="input-field focus:border-[var(--primary-color)]"
-                  placeholder="Doctor Name"
+                  className="input-field"
                   value={patientInfo.consultingDoctor}
-                  onChange={(e) => setPatientInfo({...patientInfo, consultingDoctor: e.target.value})}
+                  onChange={(e) => handlePatientInfoChange('consultingDoctor', e.target.value)}
+                  placeholder="Doctor name"
                 />
               </div>
-            </div>
-            <div className="mt-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Address</label>
-              <textarea
-                className="input-field resize-none focus:border-[var(--primary-color)]"
-                rows={2}
-                placeholder="Enter Complete Address"
-                value={patientInfo.address}
-                onChange={(e) => setPatientInfo({...patientInfo, address: e.target.value})}
-              />
-            </div>
-          </div>
-
-          {/* Vital Signs */}
-          <div className="rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
-            <h2 className="h3-heading mb-4 flex items-center">
-              <Stethoscope className="mr-2 text-[var(--accent-color)]" size={20} />
-              Vital Signs
-            </h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Temperature (°F)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  className="input-field focus:border-[var(--primary-color)]"
-                  placeholder="98.6"
-                  value={vitals.temperature}
-                  onChange={(e) => setVitals({...vitals, temperature: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Pulse (BPM)</label>
-                <input
-                  type="number"
-                  className="input-field focus:border-[var(--primary-color)]"
-                  placeholder="72"
-                  value={vitals.pulse}
-                  onChange={(e) => setVitals({...vitals, pulse: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Blood Pressure</label>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
                 <input
                   type="text"
-                  className="input-field focus:border-[var(--primary-color)]"
-                  placeholder="120/80"
-                  value={vitals.bp}
-                  onChange={(e) => setVitals({...vitals, bp: e.target.value})}
+                  className="input-field"
+                  value={patientInfo.address}
+                  onChange={(e) => handlePatientInfoChange('address', e.target.value)}
+                  placeholder="Complete address"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">SpO2 (%)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Referred By</label>
                 <input
-                  type="number"
-                  className="input-field focus:border-[var(--primary-color)]"
-                  placeholder="98"
-                  value={vitals.spo2}
-                  onChange={(e) => setVitals({...vitals, spo2: e.target.value})}
+                  type="text"
+                  className="input-field"
+                  value={patientInfo.referredBy}
+                  onChange={(e) => handlePatientInfoChange('referredBy', e.target.value)}
+                  placeholder="Referring doctor/clinic"
                 />
               </div>
             </div>
           </div>
-
-          {/* Specialty-specific Sections */}
-          <div className="rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
-            <h2 className="h3-heading mb-4 flex items-center">
-              <IconComponent className="mr-2 text-[var(--accent-color)]" size={20} />
-              {template.title}
-            </h2>
-            {template.sections.map(renderFormSection)}
-          </div>
-
-          {/* Handwritten Notes Section */}
-          <div className="rounded-xl shadow-lg bg-white p-6 mb-6 border border-gray-100">
-            <h2 className="h3-heading mb-4 flex items-center">
-              <PenTool className="mr-2 text-[var(--accent-color)]" size={20} />
-              Clinical Notes & Observations
-            </h2>
-            <div className="relative">
-              <textarea
-                className="w-full h-32 p-3 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 resize-none focus:outline-none focus:border-[var(--accent-color)] text-gray-700 font-mono"
-                placeholder="Write your clinical notes and observations here..."
-                value={handwrittenNotes}
-                onChange={(e) => setHandwrittenNotes(e.target.value)}
-                style={{ 
-                  lineHeight: '24px',
-                  backgroundImage: 'repeating-linear-gradient(transparent, transparent 23px, #e5e7eb 23px, #e5e7eb 24px)'
-                }}
-              />
+          {/* Specialty-specific Assessment Sections */}
+          {template.sections.map((section, index) => (
+            <div key={section.id} className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-semibold text-sm mr-3">
+                  {index + 1}
+                </div>
+                <h4 className="h4-heading">{section.label}</h4>
+                {section.required && <span className="ml-2 text-red-500 text-sm">*Required</span>}
+              </div>
+              {renderFormSection(section)}
             </div>
-          </div>
+          ))}
 
-          {/* Action Buttons */}
-          <div className="print:hidden">
-            <div className="flex flex-wrap gap-3 justify-center">
-              <button
-                type="submit"
-                className="btn btn-primary animate-pulse-save"
-                style={{ backgroundColor: 'var(--accent-color)' }}
-              >
-                <Save size={18} />
-                Save Assessment
-              </button>
-              <button
-                type="button"
-                className="btn bg-gray-600 hover:bg-gray-700 text-white"
-                onClick={handlePrint}
-              >
-                <Print size={16} />
-                Print Form
-              </button>
-              <button
-                type="button"
-                className="edit-btn"
-              >
-                <Download size={16} />
-                Export PDF
-              </button>
-            </div>
+        {/* Additional Notes */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center mb-4">
+            <PenTool className="w-6 h-6 text-purple-500 mr-3" />
+            <h4 className="h4-heading">Additional Notes</h4>
           </div>
-        </form>
-      </div>
-
-      {/* Print Footer - Only visible when printing */}
-      <div className="hidden print:block mt-8 border-t-2 border-[var(--primary-color)] pt-4">
-        <div className="text-center">
-          <p className="text-sm font-semibold text-[var(--primary-color)]">
-            {selectedCategory === 'AYUSH' ? 'AYUSH Department' : 'Allopathy Department'} - {template.title.replace(' Assessment', '')} Excellence
-          </p>
-          <p className="text-xs text-gray-600 mt-2">
-            © 2025 AVSwasthya Hospital System. All rights reserved. | Confidential Medical Document
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            This form contains confidential patient information and should be handled according to HIPAA guidelines.
-          </p>
-          <div className="mt-3 flex justify-center space-x-6 text-xs text-gray-500">
-            <span>Emergency: +91-XXXX-XXXX</span>
-            <span>Email: info@avswasthya.com</span>
-            <span>Website: www.avswasthya.com</span>
-          </div>
+          <textarea
+            className="input-field font-mono min-h-[120px]"
+            placeholder="Enter any additional observations, notes, or recommendations..."
+            value={handwrittenNotes}
+            onChange={(e) => setHandwrittenNotes(e.target.value)}
+          />
         </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-4 justify-center">
+          <button
+            type="submit"
+            className="btn btn-primary animate-pulse-save"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            Save Assessment
+          </button>
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+          >
+            <Print className="w-5 h-5 mr-2" />
+            Print Report
+          </button>
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="btn btn-secondary flex items-center"
+          >
+            <Download className="w-5 h-5" />
+            Download 
+          </button>
+        </div>
+        </form>
+
+        {/* Template Modal */}
+        {showTemplateModal && (
+          <TemplateModal
+            isOpen={showTemplateModal}
+            onClose={() => setShowTemplateModal(false)}
+            onSelectTemplate={handleTemplateSelect}
+            selectedTemplate={selectedTemplate}
+            selectedColor={selectedColor}
+            onColorChange={setSelectedColor}
+          />
+        )}
       </div>
     </div>
   );
 };
 
-export default MedicalAssessmentForm;
+export default InitialAssessment;

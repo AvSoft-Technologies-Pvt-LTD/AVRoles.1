@@ -1,11 +1,27 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  RiUserSettingsLine, RiBarChart2Line, RiDashboardFill, RiCalendarCheckFill, RiShoppingBagFill,
-  RiShieldCheckFill, RiAlarmWarningFill, RiSettings3Fill, RiLogoutBoxRFill, RiArrowLeftSLine,
-  RiArrowRightSLine, RiTestTubeFill, RiMicroscopeFill, RiCapsuleFill, RiFileList3Fill,
-  RiHospitalFill, RiUserSettingsFill, RiStethoscopeFill, RiUser3Fill, RiArrowDownSLine,
-  RiArrowUpSLine, 
+  RiUserSettingsLine,
+  RiBarChart2Line,
+  RiDashboardFill,
+  RiCalendarCheckFill,
+  RiShoppingBagFill,
+  RiShieldCheckFill,
+  RiAlarmWarningFill,
+  RiSettings3Fill,
+  RiLogoutBoxRFill,
+  RiArrowLeftSLine,
+  RiArrowRightSLine,
+  RiTestTubeFill,
+  RiMicroscopeFill,
+  RiCapsuleFill,
+  RiFileList3Fill,
+  RiHospitalFill,
+  RiUserSettingsFill,
+  RiStethoscopeFill,
+  RiUser3Fill,
+  RiArrowDownSLine,
+  RiArrowUpSLine,
 } from "react-icons/ri";
 
 const Sidebar = () => {
@@ -14,6 +30,20 @@ const Sidebar = () => {
   const [openSubmenuIndex, setOpenSubmenuIndex] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsCollapsed(true);
+      } else {
+        setIsCollapsed(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Call once to set initial state
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -31,6 +61,7 @@ const Sidebar = () => {
   }, [location.pathname, user]);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
@@ -46,7 +77,7 @@ const Sidebar = () => {
     lab: "Lab Technician",
     hospital: "Hospital Admin",
     patient: "Patient",
-    superadmin: "Superadmin"
+    superadmin: "Superadmin",
   };
 
   const menuItemsMap = {
@@ -55,15 +86,15 @@ const Sidebar = () => {
       { icon: RiCalendarCheckFill, label: "Appointments", path: "/doctordashboard/appointments" },
       { icon: RiShoppingBagFill, label: "Patients", path: "/doctordashboard/patients" },
       { icon: RiShieldCheckFill, label: "Payments", path: "/doctordashboard/billing" },
-      { icon: RiAlarmWarningFill, label: "Messages", path: "/doctordashboard/messages" },
-      { icon: RiSettings3Fill, label: "Settings", path: "/doctordashboard/settings" }
+      // { icon: RiAlarmWarningFill, label: "Messages", path: "/doctordashboard/messages" },
+      { icon: RiSettings3Fill, label: "Settings", path: "/doctordashboard/settings" },
     ],
     freelancer: [
       { icon: RiDashboardFill, label: "Dashboard", path: "/freelancerdashboard" },
       { icon: RiCalendarCheckFill, label: "Appointments", path: "/freelancerdashboard/appointments" },
       { icon: RiShoppingBagFill, label: "Patients", path: "/freelancerdashboard/patients" },
       { icon: RiShieldCheckFill, label: "Payments", path: "/freelancerdashboard/billing" },
-      { icon: RiSettings3Fill, label: "Settings", path: "/freelancerdashboard/settings" }
+      { icon: RiSettings3Fill, label: "Settings", path: "/freelancerdashboard/settings" },
     ],
     lab: [
       { icon: RiDashboardFill, label: "Dashboard", path: "/labdashboard" },
@@ -71,15 +102,15 @@ const Sidebar = () => {
       { icon: RiFileList3Fill, label: "Patients List", path: "/labdashboard/patientlist" },
       { icon: RiFileList3Fill, label: "Test Catalogs", path: "/labdashboard/testcatalogs" },
       { icon: RiTestTubeFill, label: "Billing", path: "/labdashboard/billing" },
-      { icon: RiUserSettingsFill, label: "Settings", path: "/labdashboard/settings" }
+      { icon: RiUserSettingsFill, label: "Settings", path: "/labdashboard/settings" },
     ],
- hospital: [
+    hospital: [
       { icon: RiDashboardFill, label: "Dashboard", path: "/hospitaldashboard" },
       { icon: RiStethoscopeFill, label: "OPD", path: "/hospitaldashboard/opd-list" },
       { icon: RiHospitalFill, label: "IPD", path: "/hospitaldashboard/Ipd" },
       { icon: RiShieldCheckFill, label: "Billing & Payments", path: "/hospitaldashboard/billing-payments" },
       { icon: RiAlarmWarningFill, label: "Emergency", path: "/hospitaldashboard/emergency" },
-      { icon: RiUserSettingsFill, label: "Settings", path: "/hospitaldashboard/settings" }
+      { icon: RiUserSettingsFill, label: "Settings", path: "/hospitaldashboard/settings" },
     ],
     superadmin: [
       { icon: RiDashboardFill, label: "Dashboard", path: "/superadmindashboard" },
@@ -90,8 +121,8 @@ const Sidebar = () => {
         isSubmenu: true,
         submenu: [
           { label: "Freelancer Doctors", path: "/superadmindashboard/manage-doctors" },
-          { label: "AV Swasthya Doctors", path: "/superadmindashboard/manage-doctors/avswasthya" }
-        ]
+          { label: "DigiHealth Doctors", path: "/superadmindashboard/manage-doctors/avswasthya" },
+        ],
       },
       { icon: RiHospitalFill, label: "Manage Hospitals", path: "/superadmindashboard/manage-hospitals" },
       { icon: RiMicroscopeFill, label: "Manage Labs", path: "/superadmindashboard/manage-labs" },
@@ -99,22 +130,22 @@ const Sidebar = () => {
       { icon: RiUserSettingsLine, label: "Roles", path: "/superadmindashboard/manage-roles" },
       { icon: RiBarChart2Line, label: "Reports", path: "/superadmindashboard/manage-reports" },
       { icon: RiShieldCheckFill, label: "Payments", path: "/superadmindashboard/payments" },
-      { icon: RiSettings3Fill, label: "Settings", path: "/superadmindashboard/settings" }
+      { icon: RiSettings3Fill, label: "Settings", path: "/superadmindashboard/settings" },
     ],
     patient: [
       { icon: RiDashboardFill, label: "Dashboard", path: "/patientdashboard" },
       { icon: RiCalendarCheckFill, label: "My Appointments", path: "/patientdashboard/app" },
       { icon: RiShoppingBagFill, label: "Medical Records", path: "/patientdashboard/medical-records" },
-       { icon: RiShoppingBagFill, label: "Online Shopping", path: "/patientdashboard/shopping" },
+      { icon: RiShoppingBagFill, label: "Online Shopping", path: "/patientdashboard/shopping" },
       { icon: RiShieldCheckFill, label: "Insurance", path: "/patientdashboard/insurance" },
       { icon: RiShieldCheckFill, label: "Billing", path: "/patientdashboard/billing" },
-      { icon: RiSettings3Fill, label: "Settings", path: "/patientdashboard/settings" }
-    ]
+      { icon: RiSettings3Fill, label: "Settings", path: "/patientdashboard/settings" },
+    ],
   };
 
   const getDisplayName = () => {
     if (!user) return "Loading...";
-    if (["doctor", "freelancer"].includes(user.userType)) return `Dr. ${user.firstName || "Sheetal "} ${user.lastName || "S. Shelke"}`;
+    if (["doctor", "freelancer"].includes(user.userType)) return `Dr. ${user.firstName || "Sheetal"} ${user.lastName || "S. Shelke"}`;
     if (user.userType === "hospital") return user.hospitalName || "City Hospital";
     if (user.userType === "lab") return user.labName || "ABC Lab";
     if (user.userType === "superadmin") return user.SuperadminName || "Dr.Shrinivas Shelke";
@@ -124,50 +155,56 @@ const Sidebar = () => {
   const menuItems = menuItemsMap[user?.userType] || [];
 
   return (
-    <div className={`h-screen bg-[var(--primary-color)] text-white p-4 flex flex-col rounded-xl shadow-xl transition-all duration-300 mx-4 ${isCollapsed ? "w-20" : "w-60"}`}>
-      <div className="flex items-center justify-between mb-6">
+    <div className={`h-screen bg-[var(--primary-color)] text-white p-2 sm:p-4 flex flex-col rounded-xl shadow-xl transition-all duration-300 ${isCollapsed ? "w-16 sm:w-20" : "w-60"}`}>
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className={`flex items-center ${isCollapsed ? "justify-center w-full" : ""}`}>
-          {!isCollapsed && <div className="text-[var(--primary-color)] text-lg bg-[var(--accent-color)] p-2 rounded-full font-bold">AV</div>}
-          {!isCollapsed && <h3 className="ml-3 font-bold">AV Swasthya</h3>}
+          {!isCollapsed && <div className="text-[var(--primary-color)] text-base sm:text-lg bg-[var(--accent-color)] p-1 sm:p-2 rounded-full font-bold">AV</div>}
+          {!isCollapsed && <h3 className="ml-2 sm:ml-3 font-bold text-sm sm:text-base">DigiHealth</h3>}
         </div>
         <button onClick={toggleSidebar} className="text-white hover:bg-slate-500 p-1 rounded-full">
-          {isCollapsed ? <RiArrowRightSLine size={24} /> : <RiArrowLeftSLine size={24} />}
+          {isCollapsed ? <RiArrowRightSLine size={20} /> : <RiArrowLeftSLine size={20} />}
         </button>
       </div>
-
-      <div className="flex items-center mb-6">
-        <div className="w-12 h-12 bg-[var(--accent-color)] text-[var(--primary-color)] flex items-center justify-center rounded-full text-xl">
+      <div className="flex items-center mb-4 sm:mb-6">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[var(--accent-color)] text-[var(--primary-color)] flex items-center justify-center rounded-full text-lg sm:text-xl">
           <RiUser3Fill />
         </div>
         {!isCollapsed && (
-          <div className="ml-3">
-            <p className="text-sm font-semibold">{getDisplayName()}</p>
+          <div className="ml-2 sm:ml-3">
+            <p className="text-xs sm:text-sm font-semibold">{getDisplayName()}</p>
             <span className="text-xs text-gray-300">{roleDisplayNames[user?.userType] || "User"}</span>
           </div>
         )}
       </div>
-
-      <hr className="border-gray-700 mb-4" />
-      <ul className="flex-1 text-sm overflow-y-auto space-y-1">
+      <hr className="border-gray-700 mb-2 sm:mb-4" />
+      <ul className="flex-1 text-xs sm:text-sm overflow-y-auto space-y-1">
         {menuItems.map((item, idx) =>
           item.isSubmenu ? (
             <li key={idx}>
               <button
                 onClick={() => handleSubmenuToggle(idx)}
-                className="flex items-center justify-between w-full py-2 px-3 rounded-lg hover:bg-[var(--accent-color)] hover:text-[var(--primary-color)] transition"
+                className="flex items-center justify-between w-full py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-[var(--accent-color)] hover:text-[var(--primary-color)] transition"
               >
-                <div className="flex items-center gap-4">
-                  <item.icon size={20} />
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <item.icon size={16} />
                   {!isCollapsed && <span>{item.label}</span>}
                 </div>
-                {!isCollapsed && (openSubmenuIndex === idx ? <RiArrowUpSLine /> : <RiArrowDownSLine />)}
+                {!isCollapsed && (openSubmenuIndex === idx ? <RiArrowUpSLine size={16} /> : <RiArrowDownSLine size={16} />)}
               </button>
               {openSubmenuIndex === idx && !isCollapsed && (
-                <ul className="ml-6 mt-1 space-y-1 text-sm">
+                <ul className="ml-4 sm:ml-6 mt-1 space-y-1 text-xs sm:text-sm">
                   {item.submenu.map((sub, subIdx) => (
                     <li key={subIdx}>
-                      <NavLink to={sub.path} className={({ isActive }) =>
-                        `block px-3 py-1 rounded-md ${isActive ? "bg-[var(--accent-color)] text-[var(--primary-color)]" : "hover:bg-gray-700"}`}>{sub.label}</NavLink>
+                      <NavLink
+                        to={sub.path}
+                        className={({ isActive }) =>
+                          `block px-2 sm:px-3 py-1 rounded-md ${
+                            isActive ? "bg-[var(--accent-color)] text-[var(--primary-color)]" : "hover:bg-gray-700"
+                          }`
+                        }
+                      >
+                        {sub.label}
+                      </NavLink>
                     </li>
                   ))}
                 </ul>
@@ -175,16 +212,26 @@ const Sidebar = () => {
             </li>
           ) : (
             <li key={idx}>
-              <NavLink to={item.path} end={item.path === "/" || item.label === "Dashboard"} className={({ isActive }) =>
-                `flex items-center gap-4 px-3 py-2 rounded-lg transition ${isActive ? "bg-[var(--accent-color)] text-[var(--primary-color)]" : "hover:bg-gray-700"}`}>
-                <item.icon size={20} /> {!isCollapsed && <span>{item.label}</span>}
+              <NavLink
+                to={item.path}
+                end={item.path === "/" || item.label === "Dashboard"}
+                className={({ isActive }) =>
+                  `flex items-center gap-2 sm:gap-4 px-2 sm:px-3 py-1 sm:py-2 rounded-lg transition ${
+                    isActive ? "bg-[var(--accent-color)] text-[var(--primary-color)]" : "hover:bg-gray-700"
+                  }`
+                }
+              >
+                <item.icon size={16} /> {!isCollapsed && <span>{item.label}</span>}
               </NavLink>
             </li>
           )
         )}
       </ul>
-      <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-red-500 bg-red-400 rounded-md mt-4">
-        <RiLogoutBoxRFill size={20} /> {!isCollapsed && <span>Logout</span>}
+      <button
+        onClick={handleLogout}
+        className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm hover:bg-red-500 bg-red-400 rounded-md mt-2 sm:mt-4"
+      >
+        <RiLogoutBoxRFill size={16} /> {!isCollapsed && <span>Logout</span>}
       </button>
     </div>
   );
